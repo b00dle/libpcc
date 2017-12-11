@@ -1,5 +1,10 @@
 # Prerequisites
 *.d
+.idea/
+
+# Test files
+*.txt
+cmake-build-debug
 
 # Compiled Object files
 *.slo
