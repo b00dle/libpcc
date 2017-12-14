@@ -1,4 +1,4 @@
-#include "Encoder.hpp"
+#include "../include/Encoder.hpp"
 #include <cassert>
 
 Encoder::Encoder()
@@ -83,9 +83,9 @@ Vec8 const Encoder::Vec32ToVec8(Vec32 const& v)
 Vec8 const Encoder::Vec32ToVec8(Vec32 const& v, BoundingBox const& bb)
 {
   Vec8 res;
-  res.x = mapTo8Bit(v.x, bb.x_min, bb.x_max);
-  res.y = mapTo8Bit(v.y, bb.y_min, bb.y_max);
-  res.z = mapTo8Bit(v.z, bb.z_min, bb.z_max);
+  res.x = mapTo8Bit(v.x, bb.min.x, bb.max.x);
+  res.y = mapTo8Bit(v.y, bb.min.y, bb.max.y);
+  res.z = mapTo8Bit(v.z, bb.min.z, bb.max.z);
   return res;
 }
 
@@ -98,9 +98,9 @@ Vec32 const Encoder::Vec8ToVec32(Vec8 const& v)
 Vec32 const Encoder::Vec8ToVec32(Vec8 const& v, BoundingBox const& bb)
 {
   Vec32 res;
-  res.x = mapTo32Bit(v.x, bb.x_min, bb.x_max);
-  res.y = mapTo32Bit(v.y, bb.y_min, bb.y_max);
-  res.z = mapTo32Bit(v.z, bb.z_min, bb.z_max);
+  res.x = mapTo32Bit(v.x, bb.min.x, bb.max.x);
+  res.y = mapTo32Bit(v.y, bb.min.y, bb.max.y);
+  res.z = mapTo32Bit(v.z, bb.min.z, bb.max.z);
   return res;
 }
 
@@ -114,9 +114,9 @@ uint32_t Encoder::Vec32ToUInt32(Vec32 const& v, BoundingBox const& bb, unsigned 
 {
   assert(x_bits + y_bits + z_bits == 32);
   uint32_t res = 0;
-  res = res | mapToBit(v.x, bb.x_min, bb.x_max, x_bits);
-  res = res | (mapToBit(v.y, bb.y_min, bb.y_max, y_bits) << x_bits);
-  res = res | (mapToBit(v.z, bb.z_min, bb.z_max, z_bits) << (x_bits+y_bits));
+  res = res | mapToBit(v.x, bb.min.x, bb.max.x, x_bits);
+  res = res | (mapToBit(v.y, bb.min.y, bb.max.y, y_bits) << x_bits);
+  res = res | (mapToBit(v.z, bb.min.z, bb.max.z, z_bits) << (x_bits+y_bits));
   return res;
 }
 
@@ -138,9 +138,9 @@ Vec32 Encoder::UInt32ToVec32(uint32_t v, BoundingBox const& bb, unsigned short x
   v = v >> y_bits;
   uint32_t z = v & (int) (pow(2, z_bits)-1);
 
-  res.x = mapFromBit(x, bb.x_min, bb.x_max, x_bits);
-  res.y = mapFromBit(y, bb.y_min, bb.y_max, y_bits);
-  res.z = mapFromBit(z, bb.z_min, bb.z_max, z_bits);
+  res.x = mapFromBit(x, bb.min.x, bb.max.x, x_bits);
+  res.y = mapFromBit(y, bb.min.y, bb.max.y, y_bits);
+  res.z = mapFromBit(z, bb.min.z, bb.max.z, z_bits);
 
   return res;
 }

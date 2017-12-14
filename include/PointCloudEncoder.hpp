@@ -1,8 +1,8 @@
 #ifndef POINT_CLOUD_ENCODER_HPP
 #define POINT_CLOUD_ENCODER_HPP
 
-#include <Encoder.hpp>
-#include <PointCloud.hpp>
+#include "Encoder.hpp"
+#include "PointCloud.hpp"
 #include <zmq.hpp>
 
 #include <vector>

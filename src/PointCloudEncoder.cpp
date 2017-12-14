@@ -1,9 +1,7 @@
-#include "PointCloudEncoder.hpp"
+#include "../include/PointCloudEncoder.hpp"
 
-#include <cassert>
 #include <iostream>
 #include <map>
-#include <utility>
 
 PointCloudEncoder::PointCloudEncoder()
   : Encoder()
@@ -26,12 +24,12 @@ zmq::message_t PointCloudEncoder::encode(PointCloud<Vec32, Vec32>* point_cloud, 
 
   std::cout << "original PC size:" << point_cloud->size() << std::endl;
 
-  header_[1] = point_cloud->bounding_box.x_min;
-  header_[2] = point_cloud->bounding_box.x_max;
-  header_[3] = point_cloud->bounding_box.y_min;
-  header_[4] = point_cloud->bounding_box.y_max;
-  header_[5] = point_cloud->bounding_box.z_min;
-  header_[6] = point_cloud->bounding_box.z_max;
+  header_[1] = point_cloud->bounding_box.min.x;
+  header_[2] = point_cloud->bounding_box.max.x;
+  header_[3] = point_cloud->bounding_box.min.y;
+  header_[4] = point_cloud->bounding_box.max.y;
+  header_[5] = point_cloud->bounding_box.min.z;
+  header_[6] = point_cloud->bounding_box.max.z;
   header_[7] = codec;
 
   if(codec == PC_3x32p_3x8c) {
@@ -71,12 +69,12 @@ bool PointCloudEncoder::decode(zmq::message_t& msg, PointCloud<Vec32, Vec32>* po
 
   point_cloud->clear();
   point_cloud->resize(num_points);
-  point_cloud->bounding_box.x_min = header_[1];
-  point_cloud->bounding_box.x_max = header_[2];
-  point_cloud->bounding_box.y_min = header_[3];
-  point_cloud->bounding_box.y_max = header_[4];
-  point_cloud->bounding_box.z_min = header_[5];
-  point_cloud->bounding_box.z_max = header_[6];
+  point_cloud->bounding_box.min.x = header_[1];
+  point_cloud->bounding_box.max.x = header_[2];
+  point_cloud->bounding_box.min.y = header_[3];
+  point_cloud->bounding_box.max.y = header_[4];
+  point_cloud->bounding_box.min.z = header_[5];
+  point_cloud->bounding_box.max.z = header_[6];
 
   // prepare point cloud
   PointCloudEncoder::Codec codec  = (PointCloudEncoder::Codec) header_[7];

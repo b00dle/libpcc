@@ -3,44 +3,88 @@
 
 #include <vector>
 #include <cstdint>
+#include <cstdlib>
 
 // uncompressed pointcloud
-
-struct Vec32 {
-    Vec32(float x_t=0.0f, float y_t=0.0f, float z_t=0.0f)
+template <typename C>
+struct Vec {
+    Vec(C x_t=C(), C y_t=C(), C z_t=C())
         : x(x_t)
         , y(y_t)
         , z(z_t)
     {}
 
-    Vec32(Vec32 const& v)
+    Vec(Vec<C> const& v)
         : x(v.x)
         , y(v.y)
         , z(v.z)
     {}
 
-    ~Vec32()
+    static size_t getComponentSize() {
+        return sizeof(C);
+    }
+
+    virtual ~Vec()
     {}
 
-    float x;
-    float y;
-    float z;
+    const Vec<C> operator+(const Vec<C>& rhs) const {
+        return Vec<C>(x+rhs.x, y+rhs.y, z+rhs.z);
+    }
+
+    const Vec<C> operator-(const Vec<C>& rhs) const {
+        return Vec<C>(x-rhs.x, y-rhs.y, z-rhs.z);
+    }
+
+    void operator+=(const Vec<C>& rhs) {
+        Vec<C> temp = (*this) + rhs;
+        x = temp.x;
+        y = temp.y;
+        z = temp.z;
+    }
+
+    void operator-=(const Vec<C>& rhs) {
+        Vec<C> temp = (*this) - rhs;
+        x = temp.x;
+        y = temp.y;
+        z = temp.z;
+    }
+
+    C x;
+    C y;
+    C z;
 };
 
-struct Vec8 {
+struct Vec32 : Vec<float> {
+    Vec32(float x_t=0.0f, float y_t=0.0f, float z_t=0.0f)
+        : Vec<float>(x_t, y_t, z_t)
+    {}
+
+    Vec32(const Vec32& v)
+        : Vec<float>(v)
+    {}
+
+    Vec32(const Vec<float>& v)
+        : Vec<float>(v)
+    {}
+
+    /*virtual*/ ~Vec32()
+    {}
+};
+
+struct Vec8 : Vec<uint8_t> {
     Vec8(uint8_t x_t=0, uint8_t y_t=0, uint8_t z_t=0)
-        : x(x_t)
-        , y(y_t)
-        , z(z_t)
+        : Vec<uint8_t>(x_t, y_t, z_t)
     {}
 
-    Vec8(Vec8 const& v)
-        : x(v.x)
-        , y(v.y)
-        , z(v.z)
+    Vec8(const Vec8& v)
+        : Vec<uint8_t>(v)
     {}
 
-    ~Vec8()
+    Vec8(const Vec<uint8_t>& v)
+        : Vec<uint8_t>(v)
+    {}
+
+    /*virtual*/ ~Vec8()
     {}
 
     uint32_t key()
@@ -52,48 +96,47 @@ struct Vec8 {
         return res;
     }
 
-    uint8_t x;
-    uint8_t y;
-    uint8_t z;
+    bool operator==(const Vec8& rhs) const {
+        return x == rhs.x &&
+               y == rhs.y &&
+               z == rhs.z;
+    }
 };
 
 // BoundBox for pointcloud sample ranges
 
 struct BoundingBox {
     BoundingBox(float x_min_t=.0f, float x_max_t=.0f, float y_min_t=.0f, float y_max_t=.0f, float z_min_t=.0f, float z_max_t=.0f)
-        : x_min(x_min_t)
-        , x_max(x_max_t)
-        , y_min(y_min_t)
-        , y_max(y_max_t)
-        , z_min(z_min_t)
-        , z_max(z_max_t)
+        : min(x_min_t, y_min_t, z_min_t)
+        , max(x_max_t, y_max_t, z_max_t)
+    {}
+
+    BoundingBox(const Vec32& min_t, const Vec32& max_t)
+        : min(min_t)
+        , max(max_t)
     {}
 
     BoundingBox(BoundingBox const& bb)
-        : x_min(bb.x_min)
-        , x_max(bb.x_max)
-        , y_min(bb.y_min)
-        , y_max(bb.y_max)
-        , z_min(bb.z_min)
-        , z_max(bb.z_max)
+        : min(bb.min)
+        , max(bb.max)
     {}
 
     ~BoundingBox()
     {}
 
-    bool contains(Vec32 const& v) 
+    bool contains(Vec32 const& v) const
     {
-        return v.x > x_min && v.x < x_max &&
-            v.y > y_min && v.y < y_max &&
-            v.z > z_min && v.z < z_max;
+        return v.x > min.x && v.x < max.x &&
+            v.y > min.y && v.y < max.y &&
+            v.z > min.z && v.z < max.z;
     }
 
-    float x_min;
-    float x_max;
-    float y_min;
-    float y_max;
-    float z_min;
-    float z_max;
+    Vec32 const calcRange() const {
+        return max - min;
+    }
+
+    Vec32 min;
+    Vec32 max;
 };
 
 // PointCloud Template struct
