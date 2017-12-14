@@ -16,15 +16,17 @@ public:
   ~Measure();
 
   // Time Measurement Functions
-  time_point<system_clock, nanoseconds> setTimeStamp();
+  time_point<system_clock, nanoseconds> createTimeStamp();
   void printTimeStamp(time_point<system_clock, nanoseconds>);
 
-  std::time_t getTimeSpanStamps(time_point<system_clock, nanoseconds>, time_point<system_clock, nanoseconds>);
-  void printTimePeriod(std::time_t);
+  std::time_t calcTimeSpan(time_point<system_clock, nanoseconds>, time_point<system_clock, nanoseconds>);
+  void printTimeSpan(std::time_t);
 
-  void stopWatch(bool);
+  void startWatch();
+  std::time_t stopWatch();
 
 private:
+std::time_t m_start_time;
 };
 
 

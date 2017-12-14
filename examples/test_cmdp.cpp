@@ -26,16 +26,31 @@ int main(int argc, char* argv[]){
   unsigned tick = 0;
   while(true){
 
-    auto test = t.Measure::setTimeStamp();
-    t.printTimeStamp(test);
+    auto t1 = t.createTimeStamp();
+    t.startWatch();
 
-    zmq::message_t zmqm(sizeof(unsigned));
-    memcpy( (unsigned char* ) zmqm.data(), (const unsigned char*) &tick, sizeof(unsigned));
-    socket.send(zmqm);
+    for(unsigned int i = 0; i < 10000000; ++i) {
+      std::cout << "----------" << std::endl;
+    }
 
-    std::cout << "sending: " << tick << std::endl;
-
-    ++tick;
+    auto t2 = t.createTimeStamp();
+    t.printTimeStamp(t1);
+    t.printTimeStamp(t2);
+    auto time_span = t.calcTimeSpan(t1, t2);
+    t.printTimeSpan(time_span);
+    t.printTimeSpan(t.stopWatch());
+    break;
+    //
+    // auto test = t.Measure::setTimeStamp();
+    // t.printTimeStamp(test);
+    //
+    // zmq::message_t zmqm(sizeof(unsigned));
+    // memcpy( (unsigned char* ) zmqm.data(), (const unsigned char*) &tick, sizeof(unsigned));
+    // socket.send(zmqm);
+    //
+    // std::cout << "sending: " << tick << std::endl;
+    //
+    // ++tick;
   }
 
   return 0;
