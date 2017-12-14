@@ -9,38 +9,61 @@ Measure::Measure()
 Measure::~Measure()
 {}
 
-  long Measure::setTimeStamp() {
-    auto current_time = high_resolution_clock::now;
-    std::cout << "Current Time Stamp: " << current_time << std::endl;
+  // Sets current TimeStamp and returns it as Time Point.
+  time_point<system_clock, nanoseconds> Measure::setTimeStamp() {
 
-    long return_current_time = (long) current_time;
+    time_point<system_clock, nanoseconds> time_point;
+    time_point = time_point_cast<nanoseconds>(system_clock::now());
 
-    return return_current_time;
+    return time_point;
   }
 
-  long Measure::getTimeSpanStamps(long start_time, long end_time) {
-    auto time_span = start_time - end_time;
+  void Measure::printTimeStamp(time_point<system_clock, nanoseconds> time_point){
+    std::time_t print_time = system_clock::to_time_t(time_point);
 
-    return time_span;
+    std::cout << "TimeStamp Value: " << print_time / 1000000000 << std::endl;
+    std::cout << "TimeStamp Value (in nanoseconds): " << print_time  << std::endl;
   }
 
+  // Takes two longs as TimeStamps and calculates TimeSpan.
+  std::time_t Measure::getTimeSpanStamps(time_point<system_clock, nanoseconds> start_point,
+                                        time_point<system_clock, nanoseconds> end_point) {
+
+    std::time_t start_time = system_clock::to_time_t(start_point);
+    std::time_t end_time = system_clock::to_time_t(end_point);
+
+    std::time_t period_time = end_time - start_time;
+
+    return period_time;
+  }
+
+  // Prints TimeSpan.
+  void Measure::printTimePeriod(std::time_t period_time) {
+    std::cout << "TimeStamp Value: " << period_time / 1000000000 << std::endl;
+    std::cout << "TimeStamp Value (in nanoseconds): " << period_time  << std::endl;
+  }
+
+  // Takes bool. For 'true' sets first TimeStamp.
+  // For 'false' sets second TimeStamp, calculates and prints TimeSpan.
   void Measure::stopWatch(bool running) {
-    long start_time;
-    long end_time;
-    long time_span;
+    time_point<system_clock, nanoseconds> time_point;
+    std::time_t start_time;
+    std::time_t end_time;
 
     if(running == true) {
-      auto start_time_point = high_resolution_clock::now;
-      start_time = (long) start_time_point;
+      time_point = time_point_cast<nanoseconds>(system_clock::now());
+      start_time = system_clock::to_time_t(time_point);
     } else {
-      auto end_time_point = high_resolution_clock::now;
-      end_time = (long) end_time_point;
+      time_point = time_point_cast<nanoseconds>(system_clock::now());
+      end_time = system_clock::to_time_t(time_point);
 
-      time_span = start_time - end_time;
-
-      std::cout << "Stopwatch counter: " << time_span << std::endl;
+      if(start_time > 0) {
+        std::time_t period_time = end_time - start_time;
+        std::cout << "Stopwatch counter: " << period_time << std::endl;
+      }
     }
   }
+
 
 // uint8_t Measure::mapTo8Bit(float value, float min, float max)
 // {

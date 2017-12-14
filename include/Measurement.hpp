@@ -4,6 +4,7 @@
 #include <math.h>
 #include <iostream>
 #include <chrono>
+#include <ctime>
 
 using namespace std::chrono;
 
@@ -14,8 +15,13 @@ public:
   Measure();
   ~Measure();
 
-  long setTimeStamp();
-  long getTimeSpanStamps(long, long);
+  // Time Measurement Functions
+  time_point<system_clock, nanoseconds> setTimeStamp();
+  void printTimeStamp(time_point<system_clock, nanoseconds>);
+
+  std::time_t getTimeSpanStamps(time_point<system_clock, nanoseconds>, time_point<system_clock, nanoseconds>);
+  void printTimePeriod(std::time_t);
+
   void stopWatch(bool);
 
 private:

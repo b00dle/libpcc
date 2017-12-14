@@ -1,4 +1,5 @@
 #include <CMDParser.hpp>
+#include <Measurement.hpp>
 
 #include <zmq.hpp>
 
@@ -16,16 +17,19 @@ int main(int argc, char* argv[]){
 
   uint32_t hwm = 1;
   socket.setsockopt(ZMQ_SNDHWM,&hwm, sizeof(hwm));
- 
+
   std::string endpoint("tcp://" + socket_name);
   socket.bind(endpoint.c_str());
 
+  Measure t;
 
   unsigned tick = 0;
   while(true){
 
-    zmq::message_t zmqm(sizeof(unsigned));
+    auto test = t.Measure::setTimeStamp();
+    t.printTimeStamp(test);
 
+    zmq::message_t zmqm(sizeof(unsigned));
     memcpy( (unsigned char* ) zmqm.data(), (const unsigned char*) &tick, sizeof(unsigned));
     socket.send(zmqm);
 
@@ -36,5 +40,3 @@ int main(int argc, char* argv[]){
 
   return 0;
 }
-
-
