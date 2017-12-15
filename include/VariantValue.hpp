@@ -23,26 +23,43 @@ public:
     VariantValue(const Vec<float>& value);
     VariantValue(const Vec<uint16_t>& value);
     VariantValue(const Vec<uint8_t>& value);
+    VariantValue(const VariantValue& value);
     ~VariantValue();
 
     VariantValueType getType() const;
+    static size_t getSize(VariantValueType type) {
+        switch(type) {
+            case NONE:
+                return 0;
+            case VEC_FLOAT:
+                return sizeof(Vec<float>);
+            case VEC_UINT16:
+                return sizeof(Vec<uint16_t>);
+            case VEC_UINT8:
+                return sizeof(Vec<uint8_t>);
+            default:
+                return 0;
+        }
+    }
 
     void set(const Vec<float>& value);
     void set(const Vec<uint16_t>& value);
     void set(const Vec<uint8_t>& value);
+    void set(const VariantValue& value);
 
     void operator=(const Vec<float>& value);
     void operator=(const Vec<uint16_t>& value);
     void operator=(const Vec<uint8_t>& value);
+    void operator=(const VariantValue& value);
 
     template <typename C>
     void set(const Vec<C>& value) {
         if (std::is_same<C, float>::value) {
             set(Vec<float>(value.x,value.y,value.z));
         } else if (std::is_same<C, uint16_t>::value) {
-            set(Vec<uint16_t >(value.x,value.y,value.z));
+            set(Vec<uint16_t>(value.x,value.y,value.z));
         } else if(std::is_same<C, uint8_t >::value) {
-            set(Vec<uint8_t >(value.x,value.y,value.z));
+            set(Vec<uint8_t>(value.x,value.y,value.z));
         }
     }
 
@@ -55,7 +72,7 @@ private:
     bool isEmpty() const;
 
     Vec<float>* v_float_;
-    Vec<uint16_t>* v_unit16_;
+    Vec<uint16_t>* v_uint16_;
     Vec<uint8_t>* v_uint8_;
     VariantValueType type_;
 };

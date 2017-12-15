@@ -17,11 +17,18 @@
 
 class PointCloudGridEncoder : public Encoder {
 
-public:
-    enum Codec {
-        PC_3x32p_3x8c,
-        PC_3x8p_3x8c,
-        PC_1x32p_1x32c
+private:
+    struct CellHeader {
+        unsigned cell_idx; // not added to message (debug use)
+        VariantValueType point_encoding;
+        VariantValueType color_encoding;
+        unsigned num_elements;
+    };
+
+    struct GlobalHeader {
+        Vec8 dimensions;
+        BoundingBox bounding_box;
+        unsigned num_blacklist;
     };
 
 public:
@@ -83,9 +90,11 @@ private:
     /* Maps a global position into local cell coordinates. */
     const Vec<float> mapToCell(const Vec32& pos, const Vec32& cell_range);
 
+    /* Calculates the overall message size in bytes */
+    size_t calcMessageSize(const std::vector<CellHeader*>&) const;
+
     VariantPointCloudGrid* pc_grid_;
-    size_t header_size_bytes_;
-    float* header_;
+    GlobalHeader* header_;
 };
 
 

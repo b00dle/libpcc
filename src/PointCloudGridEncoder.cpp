@@ -5,26 +5,67 @@
 //
 PointCloudGridEncoder::PointCloudGridEncoder()
     : pc_grid_()
-    , header_size_bytes_()
     , header_()
 {
     pc_grid_ = new VariantPointCloudGrid(Vec8(1,1,1));
+    header_ = new GlobalHeader;
 }
 
-PointCloudGridEncoder::~PointCloudGridEncoder() {
-
+PointCloudGridEncoder::~PointCloudGridEncoder()
+{
+    delete pc_grid_;
+    delete header_;
 }
 
-bool PointCloudGridEncoder::decode(zmq::message_t &msg, PointCloud<Vec32, Vec32> *point_cloud) {
+bool PointCloudGridEncoder::decode(zmq::message_t &msg, PointCloud<Vec32, Vec32> *point_cloud)
+{
     return false;
 }
 
 zmq::message_t PointCloudGridEncoder::encodePointCloudGrid() {
+    std::vector<unsigned> black_list;
+    std::vector<CellHeader*> cell_headers;
+    VariantValueType pos_type, clr_type;
+    // initialize cell headers
+    int total_elements = 0;
     for(unsigned cell_idx = 0; cell_idx < pc_grid_->cells.size(); ++cell_idx) {
-        
+        pos_type = pc_grid_->getPointType(cell_idx);
+        clr_type = pc_grid_->getColorType(cell_idx);
+        if(pos_type == NONE || clr_type == NONE) {
+            black_list.push_back(cell_idx);
+            continue;
+        }
+        CellHeader* c_header = new CellHeader;
+        c_header->cell_idx = cell_idx;
+        c_header->point_encoding = pos_type;
+        c_header->color_encoding = clr_type;
+        c_header->num_elements = pc_grid_->cells[cell_idx]->size();
+        cell_headers.push_back(c_header);
+        total_elements += c_header->num_elements;
+        std::cout << "cell elmts" << c_header->num_elements << std::endl;
     }
 
-    return zmq::message_t();
+    std::cout << "total: " << total_elements << "\n";
+
+    // fill global header
+    header_->num_blacklist = black_list.size();
+    header_->dimensions = pc_grid_->dimensions;
+    header_->bounding_box = pc_grid_->bounding_box;
+
+    // calc overall message size and init message
+    size_t message_size_bytes = calcMessageSize(cell_headers);
+
+    zmq::message_t message(message_size_bytes);
+
+    // TODO FILL MESSAGE
+
+    // Cleanup
+    while(cell_headers.size() > 0) {
+        delete cell_headers.back();
+        cell_headers.pop_back();
+    }
+
+    return message;
 }
 
 unsigned PointCloudGridEncoder::calcGridCellIndex(const Vec32 &pos, const Vec32& cell_range) const {
@@ -54,6 +95,29 @@ const Vec<float> PointCloudGridEncoder::mapToCell(const Vec32 &pos, const Vec32 
     cell_pos.y *= cell_range.y;
     cell_pos.z *= cell_range.z;
     return cell_pos;
+}
+
+size_t PointCloudGridEncoder::calcMessageSize(const std::vector<CellHeader *> & cell_headers) const {
+    // header size
+    size_t message_size = sizeof(*header_);
+    // blacklist size
+    message_size += header_->num_blacklist*sizeof(unsigned);
+    if(cell_headers.size() == 0)
+        return message_size;
+    // size of one cell header
+    size_t cell_header_size = sizeof(cell_headers[0]->num_elements);
+    cell_header_size += sizeof(cell_headers[0]->color_encoding);
+    cell_header_size += sizeof(cell_headers[0]->point_encoding);
+    // cell header sizes
+    message_size += cell_header_size * cell_headers.size();
+    for(unsigned i=0; i < cell_headers.size(); ++i) {
+        // size of elements for one cell
+        message_size += cell_headers[i]->num_elements * (
+            VariantValue::getSize(cell_headers[i]->point_encoding) +
+            VariantValue::getSize(cell_headers[i]->color_encoding)
+        );
+    }
+    return message_size;
 }
 
 

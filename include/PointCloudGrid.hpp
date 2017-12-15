@@ -67,7 +67,7 @@ struct PointCloudGrid {
     }
 
     void clearCell(unsigned cell_idx) {
-        if(cell_idx > cells.size())
+        if(cell_idx >= cells.size())
             return;
         cells[cell_idx]->clear();
     }
@@ -110,7 +110,7 @@ struct VariantPointCloudGrid : PointCloudGrid<VariantValue, VariantValue> {
     {}
 
     /*virtual*/ void addVoxel(unsigned cell_idx, const VariantValue& pos, const VariantValue& clr) {
-        if(cell_idx > cells.size())
+        if(cell_idx >= cells.size())
             return;
         if(cells[cell_idx]->size() == 0) {
             cells[cell_idx]->addVoxel(pos, clr);
@@ -122,7 +122,7 @@ struct VariantPointCloudGrid : PointCloudGrid<VariantValue, VariantValue> {
     }
 
     VariantValueType getPointType(unsigned cell_idx) const {
-        if(cell_idx > cells.size())
+        if(cell_idx >= cells.size())
             return NONE;
         if(cells[cell_idx]->points.size() == 0)
             return NONE;
@@ -130,7 +130,7 @@ struct VariantPointCloudGrid : PointCloudGrid<VariantValue, VariantValue> {
     }
 
     VariantValueType getColorType(unsigned cell_idx) const {
-        if(cell_idx > cells.size())
+        if(cell_idx >= cells.size())
             return NONE;
         if(cells[cell_idx]->points.size() == 0)
             return NONE;

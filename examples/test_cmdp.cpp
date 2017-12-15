@@ -38,12 +38,17 @@ int main(int argc, char* argv[]){
 
     PointCloudGridEncoder encoder;
     auto start = std::chrono::steady_clock::now();
-    encoder.encode<uint8_t, uint8_t>(&pc, Vec8(4,4,4));
+    zmq::message_t msg = encoder.encode<uint8_t, uint8_t>(&pc, Vec8(8,8,8));
     auto end = std::chrono::steady_clock::now();
 
     unsigned elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count();
     std::cout << "Encoding took " << elapsed << "ms.\n";
-
+    int size_bytes = msg.size();
+    int size_bit = size_bytes * 8;
+    float mbit = size_bit / 1000000.0f;
+    std::cout << "Message Size\n"
+              << "  > bytes " << size_bytes << "\n"
+              << "  > mbit " << mbit << "\n";
     /*
     unsigned tick = 0;
     while(true){
