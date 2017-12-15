@@ -27,18 +27,18 @@ int main(int argc, char* argv[]){
   while(true){
 
     auto t1 = t.createTimeStamp();
-    t.startWatch();
+    // t.startWatch();
 
-    for(unsigned int i = 0; i < 10000000; ++i) {
+    for(unsigned int i = 0; i < 1000000; ++i) {
       std::cout << "----------" << std::endl;
     }
 
     auto t2 = t.createTimeStamp();
     t.printTimeStamp(t1);
     t.printTimeStamp(t2);
-    auto time_span = t.calcTimeSpan(t1, t2);
-    t.printTimeSpan(time_span);
-    t.printTimeSpan(t.stopWatch());
+    // auto time_span = t.calcTimeSpan(t1, t2);
+    // t.printTimeSpan(time_span);
+    // t.printTimeSpan(t.stopWatch());
     break;
     //
     // auto test = t.Measure::setTimeStamp();
