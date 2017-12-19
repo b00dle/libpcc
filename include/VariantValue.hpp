@@ -27,16 +27,17 @@ public:
     ~VariantValue();
 
     VariantValueType getType() const;
-    static size_t getSize(VariantValueType type) {
+
+    static size_t getByteSize(VariantValueType type) {
         switch(type) {
             case NONE:
                 return 0;
             case VEC_FLOAT:
-                return sizeof(Vec<float>);
+                return 3*sizeof(float);
             case VEC_UINT16:
-                return sizeof(Vec<uint16_t>);
+                return 3*sizeof(uint16_t);
             case VEC_UINT8:
-                return sizeof(Vec<uint8_t>);
+                return 3*sizeof(uint8_t);
             default:
                 return 0;
         }

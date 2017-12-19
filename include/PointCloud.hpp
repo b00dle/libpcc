@@ -5,7 +5,6 @@
 #include <cstdint>
 #include <cstdlib>
 
-// uncompressed pointcloud
 template <typename C>
 struct Vec {
     Vec(C x_t=C(), C y_t=C(), C z_t=C())
