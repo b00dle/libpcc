@@ -36,6 +36,8 @@ int main(int argc, char* argv[]){
     std::cout << "point_cloud:" << std::endl;
     std::cout << " > size:" << pc.size() << "\n";
 
+    //// ENCODING
+
     PointCloudGridEncoder encoder;
     auto start = std::chrono::steady_clock::now();
     zmq::message_t msg = encoder.encode<uint8_t, uint8_t>(&pc, Vec8(8,8,8));
@@ -49,6 +51,19 @@ int main(int argc, char* argv[]){
     std::cout << "Message Size\n"
               << "  > bytes " << size_bytes << "\n"
               << "  > mbit " << mbit << "\n";
+
+    //// DECODING
+
+    start = std::chrono::steady_clock::now();
+    bool success = encoder.decode(msg, &pc);
+    end = std::chrono::steady_clock::now();
+
+    elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count();
+    std::cout << "Decoding took " << elapsed << "ms.\n";
+    if(success)
+        std::cout << "  > success: YES\n";
+    else
+        std::cout << "  > success: NO\n";
     /*
     unsigned tick = 0;
     while(true){

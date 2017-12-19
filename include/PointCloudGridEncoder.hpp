@@ -23,8 +23,8 @@ private:
         VariantValueType point_encoding; // TODO: smaller size for point_encoding
         VariantValueType color_encoding; // TODO: smaller size for color_encoding
         unsigned num_elements;
-        static size_t getByteSize() {
-            return 2*sizeof(unsigned)+ 2*sizeof(VariantValueType);
+        static size_t getByteSize() { // cell_idx not encoded
+            return 1*sizeof(unsigned)+ 2*sizeof(VariantValueType);
         }
     };
 
@@ -91,10 +91,23 @@ private:
     zmq::message_t encodePointCloudGrid();
 
     /*
+     * Helper function for decode, to extract a VariantPointCloudGrid
+     * from given zmq message, into pc_grid_.
+     * Returns success of operation.
+ *  */
+    bool decodePointCloudGrid(zmq::message_t& msg);
+
+    /*
      * Helper function for encodePointCloudGrid to encode GlobalHeader
      * Returns updated offset.
     */
     size_t encodeGlobalHeader(zmq::message_t& msg, size_t offset=0);
+
+    /*
+     * Helper function for decode to extract GlobalHeader
+     * Returns updated offset.
+    */
+    size_t decodeGlobalHeader(zmq::message_t& msg, size_t offset=0);
 
     /*
      * Helper function for encodePointCloudGrid to encode black_list
@@ -103,10 +116,22 @@ private:
     size_t encodeBlackList(zmq::message_t& msg, std::vector<unsigned> bl, size_t offset);
 
     /*
+     * Helper function for decodePointCloudGrid to decode black_list
+     * Returns updated offset.
+    */
+    size_t decodeBlackList(zmq::message_t& msg, std::vector<unsigned>& bl, size_t offset);
+
+    /*
      * Helper function for encodePointCloudGrid to encode a CellHeader
      * Returns updated offset.
     */
     size_t encodeCellHeader(zmq::message_t& msg, CellHeader* c_header, size_t offset);
+
+    /*
+     * Helper function for encodePointCloudGrid to decode a CellHeader
+     * Returns updated offset.
+    */
+    size_t decodeCellHeader(zmq::message_t& msg, CellHeader* c_header, size_t offset);
 
     /*
      * Helper function for encodePointCloudGrid to encode a GridCell
@@ -114,6 +139,14 @@ private:
      * Returns updated offset.
     */
     size_t encodeVariantCell(zmq::message_t& msg, GridCell<VariantValue,VariantValue>* cell, size_t offset);
+
+    /*
+     * Helper function for encodePointCloudGrid to decode a GridCell
+     * Cell properties are read from given CellHeader and result
+     * is stored in pc_grid_.
+     * Returns updated offset.
+    */
+    size_t decodeVariantCell(zmq::message_t& msg, CellHeader* c_header, size_t offset);
 
     /* Calculates the index of the cell a point belongs to */
     unsigned calcGridCellIndex(const Vec32& pos, const Vec32& cell_range) const;
