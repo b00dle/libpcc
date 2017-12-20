@@ -115,9 +115,9 @@ struct VariantPointCloudGrid : PointCloudGrid<VariantVec, VariantVec> {
     VariantVecType getColorType(unsigned cell_idx) const {
         if(cell_idx >= cells.size())
             return NONE;
-        if(cells[cell_idx]->points.size() == 0)
+        if(cells[cell_idx]->colors.size() == 0)
             return NONE;
-        return cells[cell_idx]->points[0].getType();
+        return cells[cell_idx]->colors[0].getType();
     }
 };
 

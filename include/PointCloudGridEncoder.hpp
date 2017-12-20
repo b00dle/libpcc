@@ -69,27 +69,19 @@ private:
         cell_range.x /= (float) pc_grid_->dimensions.x;
         cell_range.y /= (float) pc_grid_->dimensions.y;
         cell_range.z /= (float) pc_grid_->dimensions.z;
-        std::cout << "CELLS encode\n  > RANGE " << cell_range.x << "," << cell_range.y << "," << cell_range.z << std::endl;
         BoundingBox bb_cell(Vec<float>(0.0f,0.0f,0.0f), cell_range);
         BoundingBox bb_clr(Vec<float>(0.0f,0.0f,0.0f), Vec<float>(1.0f,1.0f,1.0f));
         Vec<P> compressed_pos;
         Vec<C> compressed_clr;
         VariantVec v_pos, v_clr;
         unsigned progress = 0, new_progress = 0;
-        std::cout << "  > CELL POSITIONS\n";
         for(unsigned i=0; i < point_cloud->size(); ++i) {
             if (!pc_grid_->bounding_box.contains(point_cloud->points[i]))
                 continue;
             unsigned cell_idx = calcGridCellIndex(point_cloud->points[i], cell_range);
             pos_cell = mapToCell(point_cloud->points[i], cell_range);
-            std::cout << "    ===\n";
-            std::cout << "    > global " << point_cloud->points[i].x << "," << point_cloud->points[i].y << "," << point_cloud->points[i].z << std::endl;
-            std::cout << "    > local " << pos_cell.x << "," << pos_cell.y << "," << pos_cell.z << std::endl;
             // TODO: Handle float type for pos and clr as DST type
             compressed_pos = mapVec<float, P>(pos_cell, bb_cell);
-            std::cout << "    > mapped " << (int) compressed_pos.x << "," << (int) compressed_pos.y << "," << (int) compressed_pos.z << std::endl;
-            Vec<float> test = mapVecToFloat(compressed_pos, bb_cell);
-            std::cout << "    > local (back) " << test.x << "," << test.y << "," << test.z << std::endl;
             compressed_clr = mapVec<float, C>(point_cloud->colors[i], bb_clr);
             v_pos.set<P>(compressed_pos);
             v_clr.set<C>(compressed_clr);
