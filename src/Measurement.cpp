@@ -52,8 +52,8 @@ Measure::~Measure()
   float Measure::meanSquaredErrorPC(PointCloud<Vec<float>, Vec<float>> p1, PointCloud<Vec<float>, Vec<float>> p2) {
     std::vector<Vec<float>> p1_data_points = p1.points;
     std::vector<Vec<float>> p2_data_points = p2.points;
-    std::cout << p1_data_points.size() << std::endl;
-    std::cout << p2_data_points.size() << std::endl;
+    //std::cout << p1_data_points.size() << std::endl;
+    //std::cout << p2_data_points.size() << std::endl;
 
     std::list<float> min_distance;
     float avg_error = 0;
