@@ -7,7 +7,7 @@
 
 template <typename C>
 struct Vec {
-    Vec(C x_t=C(), C y_t=C(), C z_t=C())
+    explicit Vec(C x_t=C(), C y_t=C(), C z_t=C())
         : x(x_t)
         , y(y_t)
         , z(z_t)
@@ -23,8 +23,7 @@ struct Vec {
         return sizeof(C);
     }
 
-    virtual ~Vec()
-    {}
+    virtual ~Vec() = default;
 
     const Vec<C> operator+(const Vec<C>& rhs) const {
         return Vec<C>(x+rhs.x, y+rhs.y, z+rhs.z);
@@ -53,38 +52,18 @@ struct Vec {
     C z;
 };
 
-struct Vec32 : Vec<float> {
-    Vec32(float x_t=0.0f, float y_t=0.0f, float z_t=0.0f)
-        : Vec<float>(x_t, y_t, z_t)
-    {}
-
-    Vec32(const Vec32& v)
-        : Vec<float>(v)
-    {}
-
-    Vec32(const Vec<float>& v)
-        : Vec<float>(v)
-    {}
-
-    /*virtual*/ ~Vec32()
-    {}
-};
-
 struct Vec8 : Vec<uint8_t> {
-    Vec8(uint8_t x_t=0, uint8_t y_t=0, uint8_t z_t=0)
+    explicit Vec8(uint8_t x_t=0, uint8_t y_t=0, uint8_t z_t=0)
         : Vec<uint8_t>(x_t, y_t, z_t)
     {}
 
-    Vec8(const Vec8& v)
+    Vec8(const Vec8& v) = default;
+
+    explicit Vec8(const Vec<uint8_t>& v)
         : Vec<uint8_t>(v)
     {}
 
-    Vec8(const Vec<uint8_t>& v)
-        : Vec<uint8_t>(v)
-    {}
-
-    /*virtual*/ ~Vec8()
-    {}
+    /*virtual*/ ~Vec8() = default;
 
     uint32_t key()
     {
@@ -105,51 +84,46 @@ struct Vec8 : Vec<uint8_t> {
 // BoundBox for pointcloud sample ranges
 
 struct BoundingBox {
-    BoundingBox(float x_min_t=.0f, float x_max_t=.0f, float y_min_t=.0f, float y_max_t=.0f, float z_min_t=.0f, float z_max_t=.0f)
+    explicit BoundingBox(float x_min_t=.0f, float x_max_t=.0f, float y_min_t=.0f, float y_max_t=.0f, float z_min_t=.0f, float z_max_t=.0f)
         : min(x_min_t, y_min_t, z_min_t)
         , max(x_max_t, y_max_t, z_max_t)
     {}
 
-    BoundingBox(const Vec32& min_t, const Vec32& max_t)
+    BoundingBox(const Vec<float>& min_t, const Vec<float>& max_t)
         : min(min_t)
         , max(max_t)
     {}
 
-    BoundingBox(BoundingBox const& bb)
-        : min(bb.min)
-        , max(bb.max)
-    {}
+    BoundingBox(BoundingBox const& bb) = default;
 
-    ~BoundingBox()
-    {}
+    ~BoundingBox() = default;
 
-    bool contains(Vec32 const& v) const
+    bool contains(Vec<float> const& v) const
     {
         return v.x > min.x && v.x < max.x &&
             v.y > min.y && v.y < max.y &&
             v.z > min.z && v.z < max.z;
     }
 
-    Vec32 const calcRange() const {
+    Vec<float> const calcRange() const {
         return max - min;
     }
 
-    Vec32 min;
-    Vec32 max;
+    Vec<float> min;
+    Vec<float> max;
 };
 
 // PointCloud Template struct
 
 template <typename P, typename C>
 struct PointCloud {
-    PointCloud(BoundingBox bb = BoundingBox())
+    explicit PointCloud(BoundingBox const& bb = BoundingBox())
         : bounding_box(bb)
         , points()
         , colors()
     {}
 
-    ~PointCloud()
-    {}
+    ~PointCloud() = default;
 
     void addVoxel(P const& pos, C const& clr)
     {

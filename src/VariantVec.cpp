@@ -1,9 +1,9 @@
 //
 // Created by basti on 14.12.17.
 //
-#include "../include/VariantValue.hpp"
+#include "../include/VariantVec.hpp"
 
-VariantValue::VariantValue()
+VariantVec::VariantVec()
     : v_float_(nullptr)
     , v_uint16_(nullptr)
     , v_uint8_(nullptr)
@@ -11,7 +11,7 @@ VariantValue::VariantValue()
 {}
 
 
-VariantValue::VariantValue(const Vec<float> &value)
+VariantVec::VariantVec(const Vec<float> &value)
     : v_float_(nullptr)
     , v_uint16_(nullptr)
     , v_uint8_(nullptr)
@@ -20,7 +20,7 @@ VariantValue::VariantValue(const Vec<float> &value)
     this->set<float>(value);
 }
 
-VariantValue::VariantValue(const Vec<uint16_t> &value)
+VariantVec::VariantVec(const Vec<uint16_t> &value)
     : v_float_(nullptr)
     , v_uint16_(nullptr)
     , v_uint8_(nullptr)
@@ -29,7 +29,7 @@ VariantValue::VariantValue(const Vec<uint16_t> &value)
     this->set<uint16_t>(value);
 }
 
-VariantValue::VariantValue(const Vec<uint8_t> &value)
+VariantVec::VariantVec(const Vec<uint8_t> &value)
     : v_float_(nullptr)
     , v_uint16_(nullptr)
     , v_uint8_(nullptr)
@@ -38,7 +38,7 @@ VariantValue::VariantValue(const Vec<uint8_t> &value)
     this->set<uint8_t>(value);
 }
 
-VariantValue::VariantValue(const VariantValue &value)
+VariantVec::VariantVec(const VariantVec &value)
     : v_float_(nullptr)
     , v_uint16_(nullptr)
     , v_uint8_(nullptr)
@@ -47,12 +47,12 @@ VariantValue::VariantValue(const VariantValue &value)
     set(value);
 }
 
-VariantValue::~VariantValue()
+VariantVec::~VariantVec()
 {
     clear();
 }
 
-void VariantValue::set(const Vec<float>& value)
+void VariantVec::set(const Vec<float>& value)
 {
     if(type_ != VEC_FLOAT) {
         clear();
@@ -64,7 +64,7 @@ void VariantValue::set(const Vec<float>& value)
     v_float_->z = value.z;
 }
 
-void VariantValue::set(const Vec<uint16_t>& value)
+void VariantVec::set(const Vec<uint16_t>& value)
 {
     if(type_ != VEC_UINT16) {
         clear();
@@ -76,7 +76,7 @@ void VariantValue::set(const Vec<uint16_t>& value)
     v_uint16_->z = value.z;
 }
 
-void VariantValue::set(const Vec<uint8_t>& value)
+void VariantVec::set(const Vec<uint8_t>& value)
 {
     if(type_ != VEC_UINT8) {
         clear();
@@ -89,7 +89,7 @@ void VariantValue::set(const Vec<uint8_t>& value)
 }
 
 
-void VariantValue::set(const VariantValue &value)
+void VariantVec::set(const VariantVec &value)
 {
     bool parse_ok = false;
     switch(value.type_) {
@@ -107,27 +107,31 @@ void VariantValue::set(const VariantValue &value)
     }
 }
 
-void VariantValue::operator=(const Vec<float>& value)
+VariantVec& VariantVec::operator=(const Vec<float>& value)
 {
     set(value);
+    return *this;
 }
 
-void VariantValue::operator=(const Vec<uint16_t>& value)
+VariantVec& VariantVec::operator=(const Vec<uint16_t>& value)
 {
     set(value);
+    return *this;
 }
 
-void VariantValue::operator=(const Vec<uint8_t>& value)
+VariantVec& VariantVec::operator=(const Vec<uint8_t>& value)
 {
     set(value);
+    return *this;
 }
 
-void VariantValue::operator=(const VariantValue &value)
+VariantVec& VariantVec::operator=(const VariantVec &value)
 {
     set(value);
+    return *this;
 }
 
-const Vec<float> VariantValue::toVecFloat(bool& ok) const
+const Vec<float> VariantVec::toVecFloat(bool& ok) const
 {
     if(type_ != VEC_FLOAT) {
         ok = false;
@@ -137,7 +141,7 @@ const Vec<float> VariantValue::toVecFloat(bool& ok) const
     return *v_float_;
 }
 
-const Vec<uint16_t> VariantValue::toVecUInt16(bool &ok) const {
+const Vec<uint16_t> VariantVec::toVecUInt16(bool &ok) const {
     if(type_ != VEC_UINT16) {
         ok = false;
         return Vec<uint16_t >();
@@ -146,7 +150,7 @@ const Vec<uint16_t> VariantValue::toVecUInt16(bool &ok) const {
     return *v_uint16_;
 }
 
-const Vec<uint8_t> VariantValue::toVecUInt8(bool& ok) const
+const Vec<uint8_t> VariantVec::toVecUInt8(bool& ok) const
 {
     if(type_ != VEC_UINT8) {
         ok = false;
@@ -156,12 +160,12 @@ const Vec<uint8_t> VariantValue::toVecUInt8(bool& ok) const
     return *v_uint8_;
 }
 
-VariantValueType VariantValue::getType() const
+VariantVecType VariantVec::getType() const
 {
     return type_;
 }
 
-void VariantValue::clear()
+void VariantVec::clear()
 {
     if(isEmpty())
         return;
@@ -184,7 +188,7 @@ void VariantValue::clear()
     }
 }
 
-bool VariantValue::isEmpty() const
+bool VariantVec::isEmpty() const
 {
     return type_ == NONE;
 }

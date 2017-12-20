@@ -10,25 +10,25 @@
 #include <type_traits>
 #include <iostream>
 
-enum VariantValueType {
+enum VariantVecType {
     NONE,
     VEC_FLOAT,
     VEC_UINT16,
     VEC_UINT8,
 };
 
-class VariantValue {
+class VariantVec {
 public:
-    VariantValue();
-    VariantValue(const Vec<float>& value);
-    VariantValue(const Vec<uint16_t>& value);
-    VariantValue(const Vec<uint8_t>& value);
-    VariantValue(const VariantValue& value);
-    ~VariantValue();
+    VariantVec();
+    explicit VariantVec(const Vec<float>& value);
+    explicit VariantVec(const Vec<uint16_t>& value);
+    explicit VariantVec(const Vec<uint8_t>& value);
+    VariantVec(const VariantVec& value);
+    ~VariantVec();
 
-    VariantValueType getType() const;
+    VariantVecType getType() const;
 
-    static size_t getByteSize(VariantValueType type) {
+    static size_t getByteSize(VariantVecType type) {
         switch(type) {
             case NONE:
                 return 0;
@@ -46,12 +46,12 @@ public:
     void set(const Vec<float>& value);
     void set(const Vec<uint16_t>& value);
     void set(const Vec<uint8_t>& value);
-    void set(const VariantValue& value);
+    void set(const VariantVec& value);
 
-    void operator=(const Vec<float>& value);
-    void operator=(const Vec<uint16_t>& value);
-    void operator=(const Vec<uint8_t>& value);
-    void operator=(const VariantValue& value);
+    VariantVec& operator=(const Vec<float>& value);
+    VariantVec& operator=(const Vec<uint16_t>& value);
+    VariantVec& operator=(const Vec<uint8_t>& value);
+    VariantVec& operator=(const VariantVec& value);
 
     template <typename C>
     void set(const Vec<C>& value) {
@@ -75,7 +75,7 @@ private:
     Vec<float>* v_float_;
     Vec<uint16_t>* v_uint16_;
     Vec<uint8_t>* v_uint8_;
-    VariantValueType type_;
+    VariantVecType type_;
 };
 
 #endif //LIBPCC_VARIANT_VALUE_HPP

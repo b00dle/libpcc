@@ -20,11 +20,11 @@ class PointCloudGridEncoder : public Encoder {
 private:
     struct CellHeader {
         unsigned cell_idx; // not added to message (debug use)
-        VariantValueType point_encoding; // TODO: smaller size for point_encoding
-        VariantValueType color_encoding; // TODO: smaller size for color_encoding
+        VariantVecType point_encoding; // TODO: smaller size for point_encoding
+        VariantVecType color_encoding; // TODO: smaller size for color_encoding
         unsigned num_elements;
         static size_t getByteSize() { // cell_idx not encoded
-            return 1*sizeof(unsigned)+ 2*sizeof(VariantValueType);
+            return 1*sizeof(unsigned)+ 2*sizeof(VariantVecType);
         }
     };
 
@@ -39,7 +39,7 @@ private:
 
 public:
     PointCloudGridEncoder();
-    ~PointCloudGridEncoder();
+    virtual ~PointCloudGridEncoder();
 
     /* Compresses given PointCloud and creates message from it.
      * P and C have to be primitive types to be used as TYPE
@@ -48,7 +48,7 @@ public:
      * C will be color type.
     */
     template <typename P, typename C>
-    zmq::message_t encode(PointCloud<Vec32, Vec32>* point_cloud, const Vec8& grid_dimensions) {
+    zmq::message_t encode(PointCloud<Vec<float>, Vec<float>>* point_cloud, const Vec8& grid_dimensions) {
         // Set properties for new grid
         pc_grid_->resize(grid_dimensions);
         pc_grid_->bounding_box = point_cloud->bounding_box;
@@ -58,27 +58,29 @@ public:
     };
 
     /* Decodes given message into point_cloud. Returns success. */
-    bool decode(zmq::message_t& msg, PointCloud<Vec32, Vec32>* point_cloud);
+    bool decode(zmq::message_t& msg, PointCloud<Vec<float>, Vec<float>>* point_cloud);
 
 private:
     /* Fills pc_grid_ from given point_cloud and settings */
     template <typename P, typename C>
-    void buildPointCloudGrid(PointCloud<Vec32, Vec32>* point_cloud) {
-        Vec32 cell_range = pc_grid_->bounding_box.calcRange();
+    void buildPointCloudGrid(PointCloud<Vec<float>, Vec<float>>* point_cloud) {
+        Vec<float> cell_range = pc_grid_->bounding_box.calcRange();
         Vec<float> pos_cell;
         cell_range.x /= (float) pc_grid_->dimensions.x;
         cell_range.y /= (float) pc_grid_->dimensions.y;
         cell_range.z /= (float) pc_grid_->dimensions.z;
-        BoundingBox bb_cell(Vec32(0.0f,0.0f,0.0f), cell_range);
-        BoundingBox bb_clr(Vec32(0.0f,0.0f,0.0f), Vec32(1.0f,1.0f,1.0f));
-        Vec<P> compressed_pos, compressed_clr;
-        VariantValue v_pos, v_clr;
+        BoundingBox bb_cell(Vec<float>(0.0f,0.0f,0.0f), cell_range);
+        BoundingBox bb_clr(Vec<float>(0.0f,0.0f,0.0f), Vec<float>(1.0f,1.0f,1.0f));
+        Vec<P> compressed_pos;
+        Vec<C> compressed_clr;
+        VariantVec v_pos, v_clr;
         unsigned progress = 0, new_progress = 0;
         for(unsigned i=0; i < point_cloud->size(); ++i) {
             if (!pc_grid_->bounding_box.contains(point_cloud->points[i]))
                 continue;
             unsigned cell_idx = calcGridCellIndex(point_cloud->points[i], cell_range);
             pos_cell = mapToCell(point_cloud->points[i], cell_range);
+            // TODO: Handle float type for pos and clr as DST type
             compressed_pos = mapVec<float, P>(pos_cell, bb_cell);
             compressed_clr = mapVec<float, C>(point_cloud->colors[i], bb_clr);
             v_pos.set<P>(compressed_pos);
@@ -86,6 +88,13 @@ private:
             pc_grid_->addVoxel(cell_idx, v_pos, v_clr);
         }
     }
+
+    /*
+     * Extracts a PointCloud from pc_grid_.
+     * Results are stored in pc parameter.
+     * Returns success of operation.
+    */
+    bool extractPointCloudFromGrid(PointCloud<Vec<float>, Vec<float>>* point_cloud);
 
     /* Creates a zmq message from current point_cloud grid */
     zmq::message_t encodePointCloudGrid();
@@ -138,7 +147,7 @@ private:
      * with variant value type.
      * Returns updated offset.
     */
-    size_t encodeVariantCell(zmq::message_t& msg, GridCell<VariantValue,VariantValue>* cell, size_t offset);
+    size_t encodeVariantCell(zmq::message_t& msg, GridCell<VariantVec,VariantVec>* cell, size_t offset);
 
     /*
      * Helper function for encodePointCloudGrid to decode a GridCell
@@ -149,10 +158,10 @@ private:
     size_t decodeVariantCell(zmq::message_t& msg, CellHeader* c_header, size_t offset);
 
     /* Calculates the index of the cell a point belongs to */
-    unsigned calcGridCellIndex(const Vec32& pos, const Vec32& cell_range) const;
+    unsigned calcGridCellIndex(const Vec<float>& pos, const Vec<float>& cell_range) const;
 
     /* Maps a global position into local cell coordinates. */
-    const Vec<float> mapToCell(const Vec32& pos, const Vec32& cell_range);
+    const Vec<float> mapToCell(const Vec<float>& pos, const Vec<float>& cell_range);
 
     /* Calculates the overall message size in bytes */
     size_t calcMessageSize(const std::vector<CellHeader*>&) const;

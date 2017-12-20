@@ -2,10 +2,8 @@
 
 #include <zmq.hpp>
 #include <iostream>
-#include <chrono>
 
-#include "../include/VariantValue.hpp"
-#include "../include/PointCloudGrid.hpp"
+#include "../include/VariantVec.hpp"
 #include "../include/PointCloudGridEncoder.hpp"
 
 int main(int argc, char* argv[]){
@@ -23,12 +21,12 @@ int main(int argc, char* argv[]){
     std::string endpoint("tcp://" + socket_name);
     socket.bind(endpoint.c_str());
 
-    PointCloud<Vec32, Vec32> pc(BoundingBox(Vec32(-1.01,-1.01,-1.01), Vec32(1.01,1.01,1.01)));
-    for(float x = -1.0; x < 1.0; x += 0.035) {
-        for(float y = -1.0; y < 1.0; y += 0.035) {
-            for(float z = -1.0; z < 1.0; z += 0.035) {
-                pc.points.push_back(Vec32(x,y,z));
-                pc.colors.push_back(Vec32((x+1)/2.0f,(y+1)/2.0f,(z+1)/2.0f));
+    PointCloud<Vec<float>, Vec<float>> pc(BoundingBox(Vec<float>(-1.01f,-1.01f,-1.01f), Vec<float>(1.01f,1.01f,1.01f)));
+    for(float x = -1.0f; x < 1.0; x += 0.035) {
+        for(float y = -1.0f; y < 1.0; y += 0.035) {
+            for(float z = -1.0f; z < 1.0; z += 0.035) {
+                pc.points.emplace_back(x,y,z);
+                pc.colors.emplace_back((x+1)/2.0f,(y+1)/2.0f,(z+1)/2.0f);
             }
         }
     }
@@ -40,7 +38,7 @@ int main(int argc, char* argv[]){
 
     PointCloudGridEncoder encoder;
     auto start = std::chrono::steady_clock::now();
-    zmq::message_t msg = encoder.encode<uint8_t, uint8_t>(&pc, Vec8(8,8,8));
+    zmq::message_t msg = encoder.encode<uint8_t, uint8_t>(&pc, Vec8(4,4,4));
     auto end = std::chrono::steady_clock::now();
 
     unsigned elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count();

@@ -22,29 +22,29 @@ public:
   ~PointCloudEncoder();
 
   /* Compresses given PointCloud and creates message from it */
-  zmq::message_t encode(PointCloud<Vec32, Vec32>* point_cloud, Codec codec=PC_3x32p_3x8c);  
+  zmq::message_t encode(PointCloud<Vec<float>, Vec<float>>* point_cloud, Codec codec=PC_3x32p_3x8c);
 
   /* Decodes given message into point_cloud. Returns success. */
-  bool decode(zmq::message_t& msg, PointCloud<Vec32, Vec32>* point_cloud);
+  bool decode(zmq::message_t& msg, PointCloud<Vec<float>, Vec<float>>* point_cloud);
 
 private:
   /* Compress from_pc to 32Bit component point and 8Bit component color. */
-  void compress(PointCloud<Vec32, Vec32>* from_pc, PointCloud<Vec32, Vec8>* to_pc);
+  void compress(PointCloud<Vec<float>, Vec<float>>* from_pc, PointCloud<Vec<float>, Vec8>* to_pc);
 
   /* Compress from_pc to 8Bit component point and 8Bit component color. */
-  void compress(PointCloud<Vec32, Vec32>* from_pc, PointCloud<Vec8, Vec8>* to_pc);
+  void compress(PointCloud<Vec<float>, Vec<float>>* from_pc, PointCloud<Vec8, Vec8>* to_pc);
 
   /* Compress from_pc to 32Bit (x=11bit, y=10bit, z=11bit) point and 32bit (r=10bit, g=12bit, b=10bit) color. */
-  void compress(PointCloud<Vec32, Vec32>* from_pc, PointCloud<uint32_t, uint32_t>* to_pc);
+  void compress(PointCloud<Vec<float>, Vec<float>>* from_pc, PointCloud<uint32_t, uint32_t>* to_pc);
 
   /* reverse compress from_pc to to_pc */
-  void decompress(PointCloud<Vec32, Vec8>* from_pc, PointCloud<Vec32, Vec32>* to_pc);
+  void decompress(PointCloud<Vec<float>, Vec8>* from_pc, PointCloud<Vec<float>, Vec<float>>* to_pc);
 
   /* reverse compress from_pc to to_pc */
-  void decompress(PointCloud<Vec8, Vec8>* from_pc, PointCloud<Vec32, Vec32>* to_pc);
+  void decompress(PointCloud<Vec8, Vec8>* from_pc, PointCloud<Vec<float>, Vec<float>>* to_pc);
 
   /* reverse compress from_pc to to_pc */
-  void decompress(PointCloud<uint32_t, uint32_t>* from_pc, PointCloud<Vec32, Vec32>* to_pc);
+  void decompress(PointCloud<uint32_t, uint32_t>* from_pc, PointCloud<Vec<float>, Vec<float>>* to_pc);
 
   /* Creates a zmq message from given template point cloud */
   template<typename P, typename C>
