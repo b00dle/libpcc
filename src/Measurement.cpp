@@ -70,8 +70,6 @@ Measure::~Measure()
           nearest_pair = distance_pair;
         }
       }
-      // std::cout << "--------------------" << std::endl;
-      // std::cout << "Distance: " << nearest_pair << std::endl;
       min_distance.push_back(nearest_pair);
     }
     for(auto const& l : min_distance) {

@@ -45,7 +45,7 @@ int main(int argc, char* argv[]){
 
   PointCloud<Vec32, Vec32> pc3(BoundingBox(-1.01, 1.01, -1.01, 1.01, -1.01, 1.01));
   PointCloud<Vec32, Vec32> pc4(BoundingBox(-1.01, 1.01, -1.01, 1.01, -1.01, 1.01));
-  pc3.points.push_back(Vec32(1, 1, 1));
+  pc3.points.emplace_back(1, 1, 1);
   pc3.points.push_back(Vec32(1, 1, 0));
   pc3.points.push_back(Vec32(1, 0, 0));
   pc3.points.push_back(Vec32(0, 0, 0));
@@ -57,7 +57,7 @@ int main(int argc, char* argv[]){
 
   Measure t;
   t.startWatch();
-  std::cout << t.meanSquaredErrorPC(pc, pc2) << std::endl;
+  std::cout << t.meanSquaredErrorPC(pc3, pc4) << std::endl;
   t.printTimeSpan(t.stopWatch());
 
   unsigned tick = 0;
