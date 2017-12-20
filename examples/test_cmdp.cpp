@@ -1,95 +1,98 @@
-#include "CMDParser.hpp"
-#include "Measurement.hpp"
-#include "PointCloud.hpp"
+#include "../include/Measurement.hpp"
+#include "../include/CMDParser.hpp"
 
 #include <zmq.hpp>
 
-#include <iostream>
+#include "../include/PointCloudGridEncoder.hpp"
 
 int main(int argc, char* argv[]){
+    CMDParser p("socket");
+    p.init(argc,argv);
 
-  CMDParser p("socket");
-  p.init(argc,argv);
+    std::string socket_name(p.getArgs()[0]);
 
-  std::string socket_name(p.getArgs()[0]);
+    zmq::context_t ctx(1); // means single threaded
+    zmq::socket_t  socket(ctx, ZMQ_PUB); // means a publisher
 
-  zmq::context_t ctx(1); // means single threaded
-  zmq::socket_t  socket(ctx, ZMQ_PUB); // means a publisher
+    uint32_t hwm = 1;
+    socket.setsockopt(ZMQ_SNDHWM,&hwm, sizeof(hwm));
 
-  uint32_t hwm = 1;
-  socket.setsockopt(ZMQ_SNDHWM,&hwm, sizeof(hwm));
+    std::string endpoint("tcp://" + socket_name);
+    socket.bind(endpoint.c_str());
 
-  std::string endpoint("tcp://" + socket_name);
-  socket.bind(endpoint.c_str());
+    PointCloud<Vec<float>, Vec<float>> pc(BoundingBox(Vec<float>(-1.01f,-1.01f,-1.01f), Vec<float>(1.01f,1.01f,1.01f)));
+    for(float x = -1.0f; x < 1.0; x += 0.5) {
+        pc.points.emplace_back(x,1.0f,1.0f);
+        //pc.colors.emplace_back((x+1)/2.0f,(y+1)/2.0f,(z+1)/2.0f);
+        pc.colors.emplace_back(1.0f,1.0f,1.0f);
+        /*for(float y = -1.0f; y < 1.0; y += 0.5) {
+            for(float z = -1.0f; z < 1.0; z += 0.5) {
+                pc.points.emplace_back(x,y,z);
+                pc.colors.emplace_back((x+1)/2.0f,(y+1)/2.0f,(z+1)/2.0f);
+            }
+        }*/
+    }
+
+    std::cout << "point_cloud:" << std::endl;
+    std::cout << " > size:" << pc.size() << "\n";
+    for(auto p : pc.points)
+        std::cout << "  > " << p.x << "," << p.y << "," << p.z << std::endl;
+
+    //// ENCODING
+
+    PointCloudGridEncoder encoder;
+    auto start = std::chrono::steady_clock::now();
+    zmq::message_t msg = encoder.encode<uint8_t, uint16_t>(&pc, Vec8(1,1,1));
+    auto end = std::chrono::steady_clock::now();
+
+    unsigned elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count();
+    std::cout << "Encoding took " << elapsed << "ms.\n";
+    int size_bytes = msg.size();
+    int size_bit = size_bytes * 8;
+    float mbit = size_bit / 1000000.0f;
+    std::cout << "Message Size\n"
+              << "  > bytes " << size_bytes << "\n"
+              << "  > mbit " << mbit << "\n";
+
+    //// DECODING
+    PointCloud<Vec<float>, Vec<float>> pc2;
+    start = std::chrono::steady_clock::now();
+    bool success = encoder.decode(msg, &pc2);
+    end = std::chrono::steady_clock::now();
+
+    std::cout << "point_cloud2:" << std::endl;
+    std::cout << " > size:" << pc2.size() << "\n";
+    for(auto p : pc2.points)
+        std::cout << "  > " << p.x << "," << p.y << "," << p.z << std::endl;
 
 
-  PointCloud<Vec32, Vec32> pc(BoundingBox(-1.01, 1.01, -1.01, 1.01, -1.01, 1.01));
-  for(float x = -1.0; x < 1.0; x += 0.05) {
-      for(float y = -1.0; y < 1.0; y += 0.01) {
-          for(float z = -1.0; z < 1.0; z += 0.05) {
-              pc.points.push_back(Vec32(x,y,z));
-              pc.colors.push_back(Vec32((x+1)/2.0f,(y+1)/2.0f,(z+1)/2.0f));
-          }
-      }
-  }
-
-  PointCloud<Vec32, Vec32> pc2(BoundingBox(-1.01, 1.01, -1.01, 1.01, -1.01, 1.01));
-  for(float x = -1.0; x < 1.0; x += 0.05) {
-      for(float y = -1.0; y < 1.0; y += 0.05) {
-          for(float z = -1.0; z < 1.0; z += 0.01) {
-              pc2.points.push_back(Vec32(x,y,z));
-              pc2.colors.push_back(Vec32((x+1)/2.0f,(y+1)/2.0f,(z+1)/2.0f));
-          }
-      }
-  }
-
-  PointCloud<Vec32, Vec32> pc3(BoundingBox(-1.01, 1.01, -1.01, 1.01, -1.01, 1.01));
-  PointCloud<Vec32, Vec32> pc4(BoundingBox(-1.01, 1.01, -1.01, 1.01, -1.01, 1.01));
-  pc3.points.emplace_back(1, 1, 1);
-  pc3.points.push_back(Vec32(1, 1, 0));
-  pc3.points.push_back(Vec32(1, 0, 0));
-  pc3.points.push_back(Vec32(0, 0, 0));
-  pc4.points.push_back(Vec32(-1, -1, -1));
-  pc4.points.push_back(Vec32(-1, -1, 0));
-  pc4.points.push_back(Vec32(-1, 0, 0));
-  pc4.points.push_back(Vec32(0, 0, 0));
+    elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count();
+    std::cout << "Decoding took " << elapsed << "ms.\n";
+    if(success)
+        std::cout << "  > success: YES\n";
+    else
+        std::cout << "  > success: NO\n";
 
 
-  Measure t;
-  t.startWatch();
-  std::cout << t.meanSquaredErrorPC(pc3, pc4) << std::endl;
-  t.printTimeSpan(t.stopWatch());
+    Measure t;
+    t.startWatch();
+    std::cout << t.meanSquaredErrorPC(pc, pc2) << std::endl;
+    t.printTimeSpan(t.stopWatch());
 
-  unsigned tick = 0;
-  // while(true){
+    /*
+    unsigned tick = 0;
+    while(true){
 
-    // auto t1 = t.createTimeStamp();
-    // t.startWatch();
+        zmq::message_t zmqm(sizeof(unsigned));
 
-    // for(unsigned int i = 0; i < 1000000; ++i) {
-    //   std::cout << "----------" << std::endl;
-    // }
+        memcpy( (unsigned char* ) zmqm.data(), (const unsigned char*) &tick, sizeof(unsigned));
+        socket.send(zmqm);
 
-    // auto t2 = t.createTimeStamp();
-    // t.printTimeStamp(t1);
-    // t.printTimeStamp(t2);
-    // auto time_span = t.calcTimeSpan(t1, t2);
-    // t.printTimeSpan(time_span);
-    // std::cout << "StopWatch: " << std::endl;
-    // t.printTimeSpan(t.stopWatch());
-    // break;
-    //
-    // auto test = t.Measure::setTimeStamp();
-    // t.printTimeStamp(test);
-    //
-    // zmq::message_t zmqm(sizeof(unsigned));
-    // memcpy( (unsigned char* ) zmqm.data(), (const unsigned char*) &tick, sizeof(unsigned));
-    // socket.send(zmqm);
-    //
-    // std::cout << "sending: " << tick << std::endl;
-    //
-    // ++tick;
-  // }
+        //std::cout << "sending: " << tick << std::endl;
 
-  return 0;
+        ++tick;
+    }
+    */
+
+    return 0;
 }

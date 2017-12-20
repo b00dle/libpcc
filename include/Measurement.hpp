@@ -27,7 +27,7 @@ public:
   std::time_t stopWatch();
 
   // PointCloud Analytics Functions
-  float meanSquaredErrorPC(PointCloud<Vec32, Vec32>, PointCloud<Vec32, Vec32>);
+  float meanSquaredErrorPC(PointCloud<Vec<float>, Vec<float>>, PointCloud<Vec<float>, Vec<float>>);
 
 private:
 time_point<system_clock> m_start_time;

@@ -1,4 +1,4 @@
-#include "Measurement.hpp"
+#include "../include/Measurement.hpp"
 
 Measure::Measure()
   : m_start_time()
@@ -49,9 +49,9 @@ Measure::~Measure()
 
 
   //Calculate Mean Squared Error between two PointClouds
-  float Measure::meanSquaredErrorPC(PointCloud<Vec32, Vec32> p1, PointCloud<Vec32, Vec32> p2) {
-    std::vector<Vec32> p1_data_points = p1.points;
-    std::vector<Vec32> p2_data_points = p2.points;
+  float Measure::meanSquaredErrorPC(PointCloud<Vec<float>, Vec<float>> p1, PointCloud<Vec<float>, Vec<float>> p2) {
+    std::vector<Vec<float>> p1_data_points = p1.points;
+    std::vector<Vec<float>> p2_data_points = p2.points;
     std::cout << p1_data_points.size() << std::endl;
     std::cout << p2_data_points.size() << std::endl;
 
