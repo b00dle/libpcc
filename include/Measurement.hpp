@@ -5,6 +5,9 @@
 #include <iostream>
 #include <chrono>
 #include <ctime>
+#include <list>
+#include <cassert>
+#include "PointCloud.hpp"
 
 using namespace std::chrono;
 
@@ -17,13 +20,14 @@ public:
 
   // Time Measurement Functions
   time_point<system_clock> createTimeStamp();
-  void printTimeStamp(time_point<system_clock>);
-
+  // void printTimeStamp(time_point<system_clock>);
   std::time_t calcTimeSpan(time_point<system_clock>, time_point<system_clock>);
   void printTimeSpan(std::time_t);
-
   void startWatch();
   std::time_t stopWatch();
+
+  // PointCloud Analytics Functions
+  float meanSquaredErrorPC(PointCloud<Vec32, Vec32>, PointCloud<Vec32, Vec32>);
 
 private:
 time_point<system_clock> m_start_time;
