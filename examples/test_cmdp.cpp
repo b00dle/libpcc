@@ -4,6 +4,7 @@
 #include <zmq.hpp>
 
 #include "../include/PointCloudGridEncoder.hpp"
+#include "../include/BitVec.hpp"
 
 int main(int argc, char* argv[]){
     /*
@@ -21,6 +22,21 @@ int main(int argc, char* argv[]){
     std::string endpoint("tcp://" + socket_name);
     socket.bind(endpoint.c_str());
     */
+    BitVecArray<5,5,5> arr;
+    arr.data.emplace_back(2,5,3);
+    arr.data.emplace_back(4,2,1);
+
+    std::cout << "VEC BEFORE PACK\n";
+    std::cout << "  > " << arr.data[0].x.to_ulong() << "," << arr.data[0].y.to_ulong() << "," << arr.data[0].z.to_ulong() << std::endl;
+    std::cout << "  > " << arr.data[1].x.to_ulong() << "," << arr.data[1].y.to_ulong() << "," << arr.data[1].z.to_ulong() << std::endl;
+
+    arr.calcPackedData();
+    arr.fromPackedData(1);
+
+    std::cout << "VEC AFTER PACK\n";
+    std::cout << "  > " << arr.data[0].x.to_ulong() << "," << arr.data[0].y.to_ulong() << "," << arr.data[0].z.to_ulong() << std::endl;
+    std::cout << "  > " << arr.data[1].x.to_ulong() << "," << arr.data[1].y.to_ulong() << "," << arr.data[1].z.to_ulong() << std::endl;
+
     Measure t;
 
     PointCloud<Vec<float>, Vec<float>> pc(BoundingBox(Vec<float>(-1.01f,-1.01f,-1.01f), Vec<float>(1.01f,1.01f,1.01f)));
