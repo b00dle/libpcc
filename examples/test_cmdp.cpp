@@ -22,20 +22,21 @@ int main(int argc, char* argv[]){
     std::string endpoint("tcp://" + socket_name);
     socket.bind(endpoint.c_str());
     */
-    BitVecArray<5,5,5> arr;
-    arr.data.emplace_back(2,5,3);
-    arr.data.emplace_back(4,2,1);
+    AbstractBitVecArray* a = new UniformBitVecArr<5>;
+    auto* u_a = dynamic_cast<UniformBitVecArr<5>*>(a);
+    u_a->data.emplace_back(2,5,3);
+    u_a->data.emplace_back(4,2,1);
 
     std::cout << "VEC BEFORE PACK\n";
-    std::cout << "  > " << arr.data[0].x.to_ulong() << "," << arr.data[0].y.to_ulong() << "," << arr.data[0].z.to_ulong() << std::endl;
-    std::cout << "  > " << arr.data[1].x.to_ulong() << "," << arr.data[1].y.to_ulong() << "," << arr.data[1].z.to_ulong() << std::endl;
+    std::cout << "  > " << u_a->data[0].x.to_ulong() << "," << u_a->data[0].y.to_ulong() << "," << u_a->data[0].z.to_ulong() << std::endl;
+    std::cout << "  > " << u_a->data[1].x.to_ulong() << "," << u_a->data[1].y.to_ulong() << "," << u_a->data[1].z.to_ulong() << std::endl;
 
-    arr.calcPackedData();
-    arr.fromPackedData(1);
+    u_a->calcPackedData();
+    u_a->fromPackedData(1);
 
     std::cout << "VEC AFTER PACK\n";
-    std::cout << "  > " << arr.data[0].x.to_ulong() << "," << arr.data[0].y.to_ulong() << "," << arr.data[0].z.to_ulong() << std::endl;
-    std::cout << "  > " << arr.data[1].x.to_ulong() << "," << arr.data[1].y.to_ulong() << "," << arr.data[1].z.to_ulong() << std::endl;
+    std::cout << "  > " << u_a->data[0].x.to_ulong() << "," << u_a->data[0].y.to_ulong() << "," << u_a->data[0].z.to_ulong() << std::endl;
+    std::cout << "  > " << u_a->data[1].x.to_ulong() << "," << u_a->data[1].y.to_ulong() << "," << u_a->data[1].z.to_ulong() << std::endl;
 
     Measure t;
 

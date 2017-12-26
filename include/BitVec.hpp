@@ -8,37 +8,53 @@
 #include <cstdlib>
 #include <bitset>
 
+struct AbstractBitVec {
+    AbstractBitVec() = default;
+
+    virtual ~AbstractBitVec() = default;
+
+    virtual size_t getSize() = 0;
+
+    virtual size_t getSizeX() = 0;
+
+    virtual size_t getSizeY() = 0;
+
+    virtual size_t getSizeZ() = 0;
+};
+
 template <size_t NX, size_t NY, size_t NZ>
-struct BitVec {
+struct BitVec : AbstractBitVec {
     explicit BitVec(uint64_t t_x = 0, uint64_t t_y = 0, uint64_t t_z = 0)
-        : x(t_x)
+        : AbstractBitVec()
+        , x(t_x)
         , y(t_y)
         , z(t_z)
     {}
 
     explicit BitVec(const std::bitset<NX+NY+NZ>& packed)
-        : x()
+        : AbstractBitVec()
+        , x()
         , y()
         , z()
     {
         setFromPacked(packed);
     }
 
-    ~BitVec() = default;
+    ~BitVec() override = default;
 
-    static size_t getSize() {
+    size_t getSize() override {
         return NX + NY + NZ;
     }
 
-    static size_t getSizeX() {
+    size_t getSizeX() override {
         return NX;
     }
 
-    static size_t getSizeY() {
+    size_t getSizeY() override {
         return NY;
     }
 
-    static size_t getSizeZ() {
+    size_t getSizeZ() override {
         return NZ;
     }
 
@@ -67,23 +83,53 @@ struct BitVec {
     std::bitset<NZ> z;
 };
 
+template <size_t N>
+struct UniformBitVec : BitVec<N,N,N> {};
+
+struct AbstractBitVecArray {
+    AbstractBitVecArray() = default;
+
+    virtual ~AbstractBitVecArray() = default;
+
+    virtual size_t getByteSize() = 0;
+
+    virtual size_t getNX() = 0;
+
+    virtual size_t getNY() = 0;
+
+    virtual size_t getNZ() = 0;
+};
+
 template <size_t NX, size_t NY, size_t NZ>
-struct BitVecArray {
+struct BitVecArray : AbstractBitVecArray {
     BitVecArray()
-        : data()
-        , packed_data(0)
+        : AbstractBitVecArray()
+        , data()
+        , packed_data(nullptr)
     {}
 
-    ~BitVecArray()
+    ~BitVecArray() override
     {
-        if(packed_data != 0)
+        if(packed_data != nullptr)
             delete [] packed_data;
     }
 
-    size_t getByteSize()
+    size_t getByteSize() override
     {
-        size_t bit_size = (data.size() * BitVec<NX,NY,NZ>::getSize());
+        size_t bit_size = data.size() * (NX+NY+NZ);
         return static_cast<size_t>(ceil(bit_size/8.0f));
+    }
+
+    size_t getNX() override {
+        return NX;
+    }
+
+    size_t getNY() override {
+        return NY;
+    }
+
+    size_t getNZ() override {
+        return NZ;
     }
 
     /* Fills data from packed_data. */
@@ -117,7 +163,7 @@ struct BitVecArray {
     unsigned char* calcPackedData()
     {
         // delete old data
-        if (packed_data != 0)
+        if (packed_data != nullptr)
             delete [] packed_data;
 
         packed_data = new unsigned char[getByteSize()];
@@ -127,7 +173,7 @@ struct BitVecArray {
         // Pack all BitVec
         for(auto v: data) {
             // pack x-component
-            for(size_t i = 0; i < BitVec<NX,NY,NZ>::getSizeX(); ++i) {
+            for(size_t i = 0; i < NX; ++i) {
                 byte[bit_idx] = v.x[i];
                 bit_idx = (bit_idx + 1) % 8;
                 if(bit_idx == 0) {
@@ -136,7 +182,7 @@ struct BitVecArray {
                 }
             }
             // pack y-component
-            for(size_t i = 0; i < BitVec<NX,NY,NZ>::getSizeY(); ++i) {
+            for(size_t i = 0; i < NY; ++i) {
                 byte[bit_idx] = v.y[i];
                 bit_idx = (bit_idx + 1) % 8;
                 if(bit_idx == 0) {
@@ -145,7 +191,7 @@ struct BitVecArray {
                 }
             }
             // pack z-component
-            for(size_t i = 0; i < BitVec<NX,NY,NZ>::getSizeZ(); ++i) {
+            for(size_t i = 0; i < NZ; ++i) {
                 byte[bit_idx] = v.z[i];
                 bit_idx = (bit_idx + 1) % 8;
                 if(bit_idx == 0) {
@@ -158,7 +204,7 @@ struct BitVecArray {
         // add padding for last byte if necessary
         if(bit_idx != 0) {
             while(bit_idx != 0) {
-                byte[bit_idx] = 0;
+                byte[bit_idx] = false;
                 bit_idx = (bit_idx + 1) % 8;
             }
             packed_data[current_byte] = static_cast<unsigned char>(byte.to_ulong());
@@ -170,5 +216,8 @@ struct BitVecArray {
     std::vector<BitVec<NX,NY,NZ>> data;
     unsigned char* packed_data;
 };
+
+template <size_t N>
+struct UniformBitVecArr : BitVecArray<N,N,N> {};
 
 #endif //BITVECTOR_HPP
