@@ -13,13 +13,27 @@ struct AbstractBitVec {
 
     virtual ~AbstractBitVec() = default;
 
-    virtual size_t getSize() = 0;
+    size_t getSize() const {
+        return getNX() + getNY() + getNZ();
+    }
 
-    virtual size_t getNX() = 0;
+    virtual size_t getNX() const = 0;
 
-    virtual size_t getNY() = 0;
+    virtual size_t getNY() const = 0;
 
-    virtual size_t getNZ() = 0;
+    virtual size_t getNZ() const = 0;
+
+    virtual uint64_t getX() const = 0;
+
+    virtual uint64_t getY() const = 0;
+
+    virtual uint64_t getZ() const = 0;
+
+    virtual void setX(uint64_t x_t) = 0;
+
+    virtual void setY(uint64_t y_t) = 0;
+
+    virtual void setZ(uint64_t z_t) = 0;
 };
 
 template <size_t NX, size_t NY, size_t NZ>
@@ -42,20 +56,40 @@ struct BitVec : AbstractBitVec {
 
     ~BitVec() override = default;
 
-    size_t getSize() override {
-        return NX + NY + NZ;
-    }
-
-    size_t getNX() override {
+    size_t getNX() const override {
         return NX;
     }
 
-    size_t getNY() override {
+    size_t getNY() const override {
         return NY;
     }
 
-    size_t getNZ() override {
+    size_t getNZ() const override {
         return NZ;
+    }
+
+    uint64_t getX() const override {
+        return x.to_ulong();
+    }
+
+    uint64_t getY() const override {
+        return y.to_ulong();
+    }
+
+    uint64_t getZ() const override {
+        return z.to_ulong();
+    }
+
+    void setX(uint64_t x_t) override {
+        x = std::bitset<NX>(x_t);
+    }
+
+    void setY(uint64_t y_t) override {
+        y = std::bitset<NY>(y_t);
+    }
+
+    void setZ(uint64_t z_t) {
+        z = std::bitset<NZ>(z_t);
     }
 
     const std::bitset<NX+NY+NZ> getPackedBitset() {
@@ -91,13 +125,13 @@ struct AbstractBitVecArray {
 
     virtual ~AbstractBitVecArray() = default;
 
-    virtual size_t getByteSize() = 0;
+    virtual size_t getByteSize() const = 0;
 
-    virtual size_t getNX() = 0;
+    virtual size_t getNX() const = 0;
 
-    virtual size_t getNY() = 0;
+    virtual size_t getNY() const = 0;
 
-    virtual size_t getNZ() = 0;
+    virtual size_t getNZ() const = 0;
 };
 
 template <size_t NX, size_t NY, size_t NZ>
@@ -110,21 +144,21 @@ struct BitVecArray : AbstractBitVecArray {
     ~BitVecArray() override
     {}
 
-    size_t getByteSize() override
+    size_t getByteSize() const override
     {
         size_t bit_size = data.size() * (NX+NY+NZ);
         return static_cast<size_t>(ceil(bit_size/8.0f));
     }
 
-    size_t getNX() override {
+    size_t getNX() const override {
         return NX;
     }
 
-    size_t getNY() override {
+    size_t getNY() const override {
         return NY;
     }
 
-    size_t getNZ() override {
+    size_t getNZ() const override {
         return NZ;
     }
 
