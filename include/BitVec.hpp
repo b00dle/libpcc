@@ -15,11 +15,11 @@ struct AbstractBitVec {
 
     virtual size_t getSize() = 0;
 
-    virtual size_t getSizeX() = 0;
+    virtual size_t getNX() = 0;
 
-    virtual size_t getSizeY() = 0;
+    virtual size_t getNY() = 0;
 
-    virtual size_t getSizeZ() = 0;
+    virtual size_t getNZ() = 0;
 };
 
 template <size_t NX, size_t NY, size_t NZ>
@@ -37,7 +37,7 @@ struct BitVec : AbstractBitVec {
         , y()
         , z()
     {
-        setFromPacked(packed);
+        setFromPackedBitset(packed);
     }
 
     ~BitVec() override = default;
@@ -46,19 +46,19 @@ struct BitVec : AbstractBitVec {
         return NX + NY + NZ;
     }
 
-    size_t getSizeX() override {
+    size_t getNX() override {
         return NX;
     }
 
-    size_t getSizeY() override {
+    size_t getNY() override {
         return NY;
     }
 
-    size_t getSizeZ() override {
+    size_t getNZ() override {
         return NZ;
     }
 
-    const std::bitset<NX+NY+NZ> getPacked() {
+    const std::bitset<NX+NY+NZ> getPackedBitset() {
         std::bitset<NX+NY+NZ> packed;
         for(size_t i = 0; i < NX; ++i)
             packed[i] = x[i];
@@ -69,7 +69,7 @@ struct BitVec : AbstractBitVec {
         return packed;
     }
 
-    void setFromPacked(const std::bitset<NX+NY+NZ>& packed) {
+    void setFromPackedBitset(const std::bitset<NX + NY + NZ> &packed) {
         for(size_t i = 0; i < NX; ++i)
             x[i] = packed[i];
         for(size_t i = 0; i < NY; ++i)
@@ -105,14 +105,10 @@ struct BitVecArray : AbstractBitVecArray {
     BitVecArray()
         : AbstractBitVecArray()
         , data()
-        , packed_data(nullptr)
     {}
 
     ~BitVecArray() override
-    {
-        if(packed_data != nullptr)
-            delete [] packed_data;
-    }
+    {}
 
     size_t getByteSize() override
     {
@@ -132,8 +128,12 @@ struct BitVecArray : AbstractBitVecArray {
         return NZ;
     }
 
-    /* Fills data from packed_data. */
-    void fromPackedData(size_t num_elmnts) {
+    /*
+     * Fills data from packed_data.
+     * num_elements should hold the total number of BitVec elements
+     * encoded by packed_data.
+    */
+    void unpack(unsigned char* packed_data, size_t num_elmnts) {
         data.clear();
         data.resize(num_elmnts);
 
@@ -159,14 +159,10 @@ struct BitVecArray : AbstractBitVecArray {
         }
     }
 
-    /* Fills packed_data from data. */
-    unsigned char* calcPackedData()
+    /* Returns a byte array of minimum size encoding data. */
+    unsigned char* pack()
     {
-        // delete old data
-        if (packed_data != nullptr)
-            delete [] packed_data;
-
-        packed_data = new unsigned char[getByteSize()];
+        unsigned char* packed_data = new unsigned char[getByteSize()];
         std::bitset<8> byte;
         size_t current_byte = 0;
         size_t bit_idx = 0;
@@ -214,7 +210,6 @@ struct BitVecArray : AbstractBitVecArray {
     }
 
     std::vector<BitVec<NX,NY,NZ>> data;
-    unsigned char* packed_data;
 };
 
 template <size_t N>

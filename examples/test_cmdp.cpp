@@ -31,8 +31,9 @@ int main(int argc, char* argv[]){
     std::cout << "  > " << u_a->data[0].x.to_ulong() << "," << u_a->data[0].y.to_ulong() << "," << u_a->data[0].z.to_ulong() << std::endl;
     std::cout << "  > " << u_a->data[1].x.to_ulong() << "," << u_a->data[1].y.to_ulong() << "," << u_a->data[1].z.to_ulong() << std::endl;
 
-    u_a->calcPackedData();
-    u_a->fromPackedData(1);
+    unsigned char* p = u_a->pack();
+    u_a->unpack(p, 1);
+    delete [] p;
 
     std::cout << "VEC AFTER PACK\n";
     std::cout << "  > " << u_a->data[0].x.to_ulong() << "," << u_a->data[0].y.to_ulong() << "," << u_a->data[0].z.to_ulong() << std::endl;
