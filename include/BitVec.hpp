@@ -132,6 +132,18 @@ struct AbstractBitVecArray {
     virtual size_t getNY() const = 0;
 
     virtual size_t getNZ() const = 0;
+
+    virtual void unpack(unsigned char* packed_data, size_t num_elmnts) = 0;
+
+    virtual unsigned char* pack() = 0;
+
+    virtual void push_back(const Vec<uint64_t>&) = 0;
+
+    virtual unsigned size() const = 0;
+
+    virtual void resize(unsigned s) = 0;
+
+    virtual void clear() = 0;
 };
 
 template <size_t NX, size_t NY, size_t NZ>
@@ -241,6 +253,26 @@ struct BitVecArray : AbstractBitVecArray {
         }
 
         return packed_data;
+    }
+
+    void push_back(const Vec<uint64_t>& v) override
+    {
+        data.emplace_back(v.x, v.y, v.z);
+    }
+
+    unsigned size() const override
+    {
+        return static_cast<unsigned>(data.size());
+    }
+
+    void resize(unsigned s) override
+    {
+        data.resize(s);
+    }
+
+    void clear() override
+    {
+        data.clear();
     }
 
     std::vector<BitVec<NX,NY,NZ>> data;

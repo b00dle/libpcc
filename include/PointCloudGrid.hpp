@@ -20,7 +20,7 @@ struct GridCell {
 
     unsigned size() const
     {
-        return points.size();
+        return static_cast<unsigned>(points.size());
     }
 
     void resize(unsigned s)

@@ -5,6 +5,7 @@
 
 #include "../include/PointCloudGridEncoder.hpp"
 #include "../include/BitVec.hpp"
+#include "../include/BitVecPointCloudGrid.hpp"
 
 int main(int argc, char* argv[]){
     /*
@@ -38,6 +39,9 @@ int main(int argc, char* argv[]){
     std::cout << "VEC AFTER PACK\n";
     std::cout << "  > " << u_a->data[0].x.to_ulong() << "," << u_a->data[0].y.to_ulong() << "," << u_a->data[0].z.to_ulong() << std::endl;
     std::cout << "  > " << u_a->data[1].x.to_ulong() << "," << u_a->data[1].y.to_ulong() << "," << u_a->data[1].z.to_ulong() << std::endl;
+
+    BitVecPointCloudGrid* bv_pc = new BitVecPointCloudGrid;
+    delete bv_pc;
 
     Measure t;
 
