@@ -7,6 +7,10 @@
 #include "../include/BitVec.hpp"
 #include "../include/BitVecPointCloudGrid.hpp"
 
+constexpr size_t div(size_t x) {
+    return x / 2;
+}
+
 int main(int argc, char* argv[]){
     /*
     CMDParser p("socket");
@@ -23,8 +27,11 @@ int main(int argc, char* argv[]){
     std::string endpoint("tcp://" + socket_name);
     socket.bind(endpoint.c_str());
     */
-    AbstractBitVecArray* a = new UniformBitVecArr<5>;
-    auto* u_a = dynamic_cast<UniformBitVecArr<5>*>(a);
+    constexpr size_t N(10);
+    constexpr size_t N_(div(N));
+
+    AbstractBitVecArray* a = new UniformBitVecArr<N_>;
+    auto* u_a = dynamic_cast<UniformBitVecArr<N_>*>(a);
     u_a->data.emplace_back(2,5,3);
     u_a->data.emplace_back(4,2,1);
 

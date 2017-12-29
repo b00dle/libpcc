@@ -68,6 +68,10 @@ struct BitVec : AbstractBitVec {
         return NZ;
     }
 
+    Vec<uint64_t> const get() {
+        return Vec<uint64_t>(getX(), getY(), getZ());
+    }
+
     uint64_t getX() const override {
         return x.to_ulong();
     }
@@ -125,6 +129,11 @@ struct AbstractBitVecArray {
 
     virtual ~AbstractBitVecArray() = default;
 
+    static size_t getByteSize(unsigned num_elmts, size_t NX, size_t NY, size_t NZ) {
+        size_t bit_size = num_elmts * (NX+NY+NZ);
+        return static_cast<size_t>(ceil(bit_size/8.0f));
+    }
+
     virtual size_t getByteSize() const = 0;
 
     virtual size_t getNX() const = 0;
@@ -132,6 +141,8 @@ struct AbstractBitVecArray {
     virtual size_t getNY() const = 0;
 
     virtual size_t getNZ() const = 0;
+
+    virtual Vec<uint64_t> const operator[](unsigned i) = 0;
 
     virtual void unpack(unsigned char* packed_data, size_t num_elmnts) = 0;
 
@@ -158,8 +169,7 @@ struct BitVecArray : AbstractBitVecArray {
 
     size_t getByteSize() const override
     {
-        size_t bit_size = data.size() * (NX+NY+NZ);
-        return static_cast<size_t>(ceil(bit_size/8.0f));
+        return AbstractBitVecArray::getByteSize(static_cast<unsigned>(data.size()), NX, NY, NZ);
     }
 
     size_t getNX() const override {
@@ -172,6 +182,10 @@ struct BitVecArray : AbstractBitVecArray {
 
     size_t getNZ() const override {
         return NZ;
+    }
+
+    Vec<uint64_t> const operator[](unsigned i) override {
+        return data[i].get();
     }
 
     /*

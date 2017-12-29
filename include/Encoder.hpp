@@ -4,6 +4,7 @@
 #include <cmath>
 #include "PointCloud.hpp"
 #include "VariantVec.hpp"
+#include "../include/BitVec.hpp"
 
 class Encoder {
 
@@ -40,6 +41,18 @@ public:
         return res;
     };
 
+    /*
+     * Maps 'from' vec into range determined by bb and bit range per component
+     * Results is returned as unsigned long to make sure values fit.
+     */
+    static const Vec<uint64_t> mapVec(const Vec<float>& from, BoundingBox const& bb, const Vec<uint8_t>& bits) {
+        Vec<uint64_t> res;
+        res.x = mapToBit(from.x, bb.min.x, bb.max.x, bits.x);
+        res.y = mapToBit(from.y, bb.min.y, bb.max.y, bits.y);
+        res.z = mapToBit(from.z, bb.min.z, bb.max.z, bits.z);
+        return res;
+    };
+
     template <typename SRC>
     static const Vec<float> mapVecToFloat(const Vec<SRC>& from, BoundingBox const& bb) {
         auto bits = static_cast<uint8_t>(Vec<SRC>::getComponentSize()*8);
@@ -47,6 +60,14 @@ public:
         res.x = mapFromBit((uint32_t) from.x, bb.min.x, bb.max.x, bits);
         res.y = mapFromBit((uint32_t) from.y, bb.min.y, bb.max.y, bits);
         res.z = mapFromBit((uint32_t) from.z, bb.min.z, bb.max.z, bits);
+        return res;
+    };
+
+    static const Vec<float> mapVecToFloat(const Vec<uint64_t>& from, BoundingBox const& bb, const Vec<uint8_t>& bits) {
+        Vec<float> res;
+        res.x = mapFromBit((uint32_t) from.x, bb.min.x, bb.max.x, bits.x);
+        res.y = mapFromBit((uint32_t) from.y, bb.min.y, bb.max.y, bits.y);
+        res.z = mapFromBit((uint32_t) from.z, bb.min.z, bb.max.z, bits.z);
         return res;
     };
 
