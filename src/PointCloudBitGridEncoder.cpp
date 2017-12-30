@@ -22,6 +22,7 @@ bool PointCloudBitGridEncoder::decode(zmq::message_t &msg, PointCloud<Vec<float>
 {
     if(!decodePointCloudGrid(msg))
         return false;
+    std::cout << "DECODE GRID done\n";
     return extractPointCloudFromGrid(point_cloud);
 }
 
@@ -55,17 +56,17 @@ bool PointCloudBitGridEncoder::extractPointCloudFromGrid(PointCloud<Vec<float>, 
                     y_idx * pc_grid_->dimensions.x +
                     z_idx * pc_grid_->dimensions.x * pc_grid_->dimensions.y;
                 cell = pc_grid_->cells[cell_idx];
-                p_bits.x = cell->points->getNX();
-                p_bits.y = cell->points->getNY();
-                p_bits.z = cell->points->getNZ();
-                c_bits.x = cell->colors->getNX();
-                c_bits.y = cell->colors->getNY();
-                c_bits.z = cell->colors->getNZ();
+                p_bits.x = cell->points.getNX();
+                p_bits.y = cell->points.getNY();
+                p_bits.z = cell->points.getNZ();
+                c_bits.x = cell->colors.getNX();
+                c_bits.y = cell->colors.getNY();
+                c_bits.z = cell->colors.getNZ();
                 glob_cell_min = Vec<float>(cell_range.x*x_idx, cell_range.y*y_idx, cell_range.z*z_idx);
                 glob_cell_min += pc_grid_->bounding_box.min;
                 for(unsigned i=0; i < cell->size(); ++i) {
-                    v_pos = (*cell->points)[i];
-                    v_clr = (*cell->colors)[i];
+                    v_pos = cell->points[i];
+                    v_clr = cell->colors[i];
                     pos_cell = mapVecToFloat(v_pos, bb_cell, p_bits);
                     clr = mapVecToFloat(v_clr, bb_clr, c_bits);
                     point_cloud->points[point_idx] = pos_cell+glob_cell_min;
@@ -90,8 +91,13 @@ zmq::message_t PointCloudBitGridEncoder::encodePointCloudGrid() {
         }
         auto c_header = new CellHeader;
         c_header->cell_idx = cell_idx;
-        c_header->point_encoding = getComponentPrecision((*pc_grid_)[cell_idx]->points);
-        c_header->color_encoding = getComponentPrecision((*pc_grid_)[cell_idx]->colors);
+        // TODO extend header with precise encoding
+        c_header->point_encoding_x = (*pc_grid_)[cell_idx]->points.getNX();
+        c_header->point_encoding_y = (*pc_grid_)[cell_idx]->points.getNY();
+        c_header->point_encoding_z = (*pc_grid_)[cell_idx]->points.getNZ();
+        c_header->color_encoding_x = (*pc_grid_)[cell_idx]->colors.getNX();
+        c_header->color_encoding_y = (*pc_grid_)[cell_idx]->colors.getNY();
+        c_header->color_encoding_z = (*pc_grid_)[cell_idx]->colors.getNZ();
         c_header->num_elements = pc_grid_->cells[cell_idx]->size();
         cell_headers.push_back(c_header);
         total_elements += c_header->num_elements;
@@ -267,10 +273,14 @@ size_t PointCloudBitGridEncoder::encodeCellHeader(zmq::message_t& msg, CellHeade
     memcpy((unsigned char*) msg.data() + offset, (unsigned char*) num_elmts , bytes_num_elmts);
     offset += bytes_num_elmts;
 
-    auto encoding = new BitCount[2];
-    size_t bytes_enc(2*sizeof(VariantVecType));
-    encoding[0] = c_header->point_encoding;
-    encoding[1] = c_header->color_encoding;
+    auto encoding = new BitCount[6];
+    size_t bytes_enc(6*sizeof(BitCount));
+    encoding[0] = c_header->point_encoding_x;
+    encoding[1] = c_header->point_encoding_y;
+    encoding[2] = c_header->point_encoding_z;
+    encoding[3] = c_header->color_encoding_x;
+    encoding[4] = c_header->color_encoding_y;
+    encoding[5] = c_header->color_encoding_z;
     memcpy((unsigned char*) msg.data() + offset, (unsigned char*) encoding, bytes_enc);
     offset += bytes_enc;
 
@@ -288,11 +298,15 @@ size_t PointCloudBitGridEncoder::decodeCellHeader(zmq::message_t& msg, CellHeade
     c_header->num_elements = num_elmts[0];
     offset += bytes_num_elmts;
 
-    auto encoding = new BitCount[2];
-    size_t bytes_enc(2* sizeof(VariantVecType));
+    auto encoding = new BitCount[6];
+    size_t bytes_enc(6*sizeof(BitCount));
     memcpy((unsigned char*) encoding, (unsigned char*) msg.data() + offset, bytes_enc);
-    c_header->point_encoding = encoding[0];
-    c_header->color_encoding = encoding[1];
+    c_header->point_encoding_x = encoding[0];
+    c_header->point_encoding_y = encoding[1];
+    c_header->point_encoding_z = encoding[2];
+    c_header->color_encoding_x = encoding[3];
+    c_header->color_encoding_y = encoding[4];
+    c_header->color_encoding_z = encoding[5];
     offset += bytes_enc;
 
     // cleanup
@@ -307,14 +321,14 @@ size_t PointCloudBitGridEncoder::encodeCell(zmq::message_t &msg, BitVecGridCell*
         return offset;
 
     // pack positions
-    unsigned char* p_packed = cell->points->pack();
-    size_t bytes_p(cell->points->getByteSize());
+    unsigned char* p_packed = cell->points.pack();
+    size_t bytes_p(cell->points.getByteSize());
     memcpy((unsigned char*) msg.data() + offset, p_packed, bytes_p);
     offset += bytes_p;
 
     // pack colors
-    unsigned char* c_packed = cell->colors->pack();
-    size_t bytes_c(cell->colors->getByteSize());
+    unsigned char* c_packed = cell->colors.pack();
+    size_t bytes_c(cell->colors.getByteSize());
     memcpy((unsigned char*) msg.data() + offset, c_packed, bytes_c);
     offset += bytes_c;
 
@@ -329,96 +343,40 @@ size_t PointCloudBitGridEncoder::decodeCell(zmq::message_t &msg, CellHeader *c_h
     if(c_header->num_elements == 0)
         return offset;
 
+    // TODO precise encoding
     BitVecGridCell* cell = pc_grid_->cells[c_header->cell_idx];
 
-    switch (c_header->point_encoding) {
-        case BIT_1:
-            cell->initPoints<BIT_1, BIT_1, BIT_1>(); break;
-        case BIT_2:
-            cell->initPoints<BIT_2, BIT_2, BIT_2>(); break;
-        case BIT_3:
-            cell->initPoints<BIT_3, BIT_3, BIT_3>(); break;
-        case BIT_4:
-            cell->initPoints<BIT_4, BIT_4, BIT_4>(); break;
-        case BIT_5:
-            cell->initPoints<BIT_5, BIT_5, BIT_5>(); break;
-        case BIT_6:
-            cell->initPoints<BIT_6, BIT_6, BIT_6>(); break;
-        case BIT_7:
-            cell->initPoints<BIT_7, BIT_7, BIT_7>(); break;
-        case BIT_8:
-            cell->initPoints<BIT_8, BIT_8, BIT_8>(); break;
-        case BIT_9:
-            cell->initPoints<BIT_9, BIT_9, BIT_9>(); break;
-        case BIT_10:
-            cell->initPoints<BIT_10, BIT_10, BIT_10>(); break;
-        case BIT_11:
-            cell->initPoints<BIT_11, BIT_11, BIT_11>(); break;
-        case BIT_12:
-            cell->initPoints<BIT_12, BIT_12, BIT_12>(); break;
-        case BIT_13:
-            cell->initPoints<BIT_13, BIT_13, BIT_13>(); break;
-        case BIT_14:
-            cell->initPoints<BIT_14, BIT_14, BIT_14>(); break;
-        case BIT_15:
-            cell->initPoints<BIT_15, BIT_15, BIT_15>(); break;
-        case BIT_16:
-            cell->initPoints<BIT_16, BIT_16, BIT_16>(); break;
-        default:
-            break;
-    }
+    // set BitCount and element count for position data
+    cell->initPoints(
+        c_header->point_encoding_x,
+        c_header->point_encoding_y,
+        c_header->point_encoding_z
+    );
+    cell->points.resize(c_header->num_elements);
 
-    switch (c_header->color_encoding) {
-        case BIT_1:
-            cell->initColors<BIT_1, BIT_1, BIT_1>(); break;
-        case BIT_2:
-            cell->initColors<BIT_2, BIT_2, BIT_2>(); break;
-        case BIT_3:
-            cell->initColors<BIT_3, BIT_3, BIT_3>(); break;
-        case BIT_4:
-            cell->initColors<BIT_4, BIT_4, BIT_4>(); break;
-        case BIT_5:
-            cell->initColors<BIT_5, BIT_5, BIT_5>(); break;
-        case BIT_6:
-            cell->initColors<BIT_6, BIT_6, BIT_6>(); break;
-        case BIT_7:
-            cell->initColors<BIT_7, BIT_7, BIT_7>(); break;
-        case BIT_8:
-            cell->initColors<BIT_8, BIT_8, BIT_8>(); break;
-        case BIT_9:
-            cell->initColors<BIT_9, BIT_9, BIT_9>(); break;
-        case BIT_10:
-            cell->initColors<BIT_10, BIT_10, BIT_10>(); break;
-        case BIT_11:
-            cell->initColors<BIT_11, BIT_11, BIT_11>(); break;
-        case BIT_12:
-            cell->initColors<BIT_12, BIT_12, BIT_12>(); break;
-        case BIT_13:
-            cell->initColors<BIT_13, BIT_13, BIT_13>(); break;
-        case BIT_14:
-            cell->initColors<BIT_14, BIT_14, BIT_14>(); break;
-        case BIT_15:
-            cell->initColors<BIT_15, BIT_15, BIT_15>(); break;
-        case BIT_16:
-            cell->initColors<BIT_16, BIT_16, BIT_16>(); break;
-        default:
-            break;
-    }
+    // set BitCount and element count for color data
+    cell->initColors(
+            c_header->color_encoding_x,
+            c_header->color_encoding_y,
+            c_header->color_encoding_z
+    );
+    cell->colors.resize(c_header->num_elements);
 
-    BitCount N = c_header->point_encoding;
-    size_t bytes_p(AbstractBitVecArray::getByteSize(c_header->num_elements, N, N, N));
+    // extract position data
+    size_t bytes_p(cell->points.getByteSize());
     auto p_arr = new unsigned char[bytes_p];
     memcpy(p_arr, (unsigned char*) msg.data() + offset, bytes_p);
     offset += bytes_p;
-    cell->points->unpack(p_arr, c_header->num_elements);
+    cell->points.unpack(p_arr, c_header->num_elements);
 
-    N = c_header->color_encoding;
-    size_t bytes_c(AbstractBitVecArray::getByteSize(c_header->num_elements, N, N, N));
+    // extract color data
+    size_t bytes_c(cell->colors.getByteSize());
     auto c_arr = new unsigned char[bytes_c];
     memcpy(c_arr, (unsigned char*) msg.data() + offset, bytes_c);
     offset += bytes_c;
-    cell->colors->unpack(c_arr, c_header->num_elements);
+    cell->colors.unpack(c_arr, c_header->num_elements);
 
+    // cleanup
     delete [] p_arr;
     delete [] c_arr;
 
@@ -476,24 +434,20 @@ size_t PointCloudBitGridEncoder::calcMessageSize(const std::vector<CellHeader *>
         // size of elements for one cell
         message_size += AbstractBitVecArray::getByteSize(
             c_header->num_elements,
-            c_header->point_encoding,
-            c_header->point_encoding,
-            c_header->point_encoding
+            c_header->point_encoding_x,
+            c_header->point_encoding_y,
+            c_header->point_encoding_z
         );
         message_size += AbstractBitVecArray::getByteSize(
                 c_header->num_elements,
-                c_header->color_encoding,
-                c_header->color_encoding,
-                c_header->color_encoding
+                c_header->color_encoding_x,
+                c_header->color_encoding_y,
+                c_header->color_encoding_z
         );
     }
     std::cout << "CELLS\n";
     std::cout << " > ELEMENT COUNT " << num_elements << std::endl;
     return message_size;
-}
-
-BitCount PointCloudBitGridEncoder::getComponentPrecision(AbstractBitVecArray *arr) {
-    return arr->getNX();
 }
 
 

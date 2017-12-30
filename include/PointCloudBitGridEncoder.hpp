@@ -38,17 +38,26 @@ private:
 
     struct CellHeader {
         unsigned cell_idx; // not added to message (debug use)
-        BitCount point_encoding;
-        BitCount color_encoding;
+        // TODO: pack
+        BitCount point_encoding_x;
+        BitCount point_encoding_y;
+        BitCount point_encoding_z;
+        BitCount color_encoding_x;
+        BitCount color_encoding_y;
+        BitCount color_encoding_z;
         unsigned num_elements;
         static size_t getByteSize() { // cell_idx not encoded
-            return 1*sizeof(unsigned)+ 2*sizeof(BitCount);
+            return 1*sizeof(unsigned)+ 6*sizeof(BitCount);
         }
         const std::string toString() const {
             std::stringstream ss;
             ss << "CellHeader(c_idx=" << cell_idx << ", ";
-            ss << "p_enc=" << point_encoding << ", ";
-            ss << "c_enc=" << color_encoding << ", ";
+            ss << "p_enc_x=" << point_encoding_x << ", ";
+            ss << "p_enc_y=" << point_encoding_y << ", ";
+            ss << "p_enc_z=" << point_encoding_z << ", ";
+            ss << "c_enc_x=" << color_encoding_x << ", ";
+            ss << "c_enc_y=" << color_encoding_y << ", ";
+            ss << "c_enc_z=" << color_encoding_z << ", ";
             ss << "num_elmts=" << num_elements << ")";
             return ss.str();
         }
@@ -63,12 +72,11 @@ public:
      * M_P and M_C are the maximum precision used to
      * encode components of position (M_P) and color (M_C) in bits.
     */
-    template <BitCount M_P, BitCount M_C>
-    zmq::message_t encode(PointCloud<Vec<float>, Vec<float>>* point_cloud, const Vec8& grid_dimensions) {
+    zmq::message_t encode(PointCloud<Vec<float>, Vec<float>>* point_cloud, const Vec8& grid_dimensions, const Vec<BitCount>& M_P, const Vec<BitCount>& M_C) {
         // Set properties for new grid
         pc_grid_->resize(grid_dimensions);
         pc_grid_->bounding_box = point_cloud->bounding_box;
-        buildPointCloudGrid<M_P, M_C>(point_cloud);
+        buildPointCloudGrid(point_cloud, M_P, M_C);
         return encodePointCloudGrid();
     };
 
@@ -77,13 +85,11 @@ public:
 
 private:
     /* Fills pc_grid_ from given point_cloud and settings */
-    template <BitCount M_P, BitCount M_C>
-    void buildPointCloudGrid(PointCloud<Vec<float>, Vec<float>>* point_cloud) {
+    void buildPointCloudGrid(PointCloud<Vec<float>, Vec<float>>* point_cloud, const Vec<BitCount>& M_P, const Vec<BitCount>& M_C) {
         // init all cells to default BitCount
-        // TODO: make adaptive
         for(auto c : pc_grid_->cells) {
-            c->initPoints<M_P, M_P, M_P>();
-            c->initColors<M_C, M_C, M_C>();
+            c->initPoints(M_P.x, M_P.y, M_P.z);
+            c->initColors(M_C.x, M_C.y, M_C.z);
         }
         Vec<float> cell_range = pc_grid_->bounding_box.calcRange();
         Vec<float> pos_cell;
@@ -95,8 +101,8 @@ private:
         Vec<uint64_t> compressed_pos;
         Vec<uint64_t> compressed_clr;
         VariantVec v_pos, v_clr;
-        Vec<uint8_t> p_bits(M_P, M_P, M_P);
-        Vec<uint8_t> c_bits(M_C, M_C, M_C);
+        Vec<uint8_t> p_bits(M_P.x, M_P.y, M_P.z);
+        Vec<uint8_t> c_bits(M_C.x, M_C.y, M_C.z);
         unsigned progress = 0, new_progress = 0;
         for(unsigned i=0; i < point_cloud->size(); ++i) {
             if (!pc_grid_->bounding_box.contains(point_cloud->points[i]))
@@ -107,6 +113,7 @@ private:
             compressed_clr = mapVec(point_cloud->colors[i], bb_clr, c_bits);
             (*pc_grid_)[cell_idx]->addVoxel(compressed_pos, compressed_clr);
         }
+        std::cout << "DONE building grid\n";
     }
 
     /*
@@ -184,9 +191,6 @@ private:
 
     /* Calculates the overall message size in bytes */
     size_t calcMessageSize(const std::vector<CellHeader*>&) const;
-
-    /* Determines the BitCount of given AbstractBitVecArray */
-    BitCount getComponentPrecision(AbstractBitVecArray* arr);
 
     BitVecPointCloudGrid* pc_grid_;
     GlobalHeader* header_;

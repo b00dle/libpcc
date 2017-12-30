@@ -9,65 +9,45 @@
 #include "../include/PointCloud.hpp"
 
 struct BitVecGridCell {
-    BitVecGridCell()
-        : points(nullptr)
-        , colors(nullptr)
+    BitVecGridCell() = default;
+
+    ~BitVecGridCell() = default;
+
+    void initPoints(BitCount NX, BitCount NY, BitCount NZ)
     {
-        points = new BitVecArray<BIT_8,BIT_8,BIT_8>;
-        colors = new BitVecArray<BIT_8,BIT_8,BIT_8>;
+        points.init(NX, NY, NZ);
     }
 
-    ~BitVecGridCell()
+    void initColors(BitCount NX, BitCount NY, BitCount NZ)
     {
-        delete points;
-        delete colors;
-    }
-
-    template<BitCount NX, BitCount NY, BitCount NZ>
-    void initPoints()
-    {
-        if(points->getNX() != NX || points->getNY() != NY || points->getNZ() != NZ) {
-            delete points;
-            points = new BitVecArray<NX,NY,NZ>;
-        }
-        points->clear();
-    }
-
-    template<BitCount NX, BitCount NY, BitCount NZ>
-    void initColors()
-    {
-        if(colors->getNX() != NX || colors->getNY() != NY || colors->getNZ() != NZ) {
-            delete colors;
-            colors = new BitVecArray<NX,NY,NZ>;
-        }
-        colors->clear();
+        colors.init(NX, NY, NZ);
     }
 
     void addVoxel(const Vec<uint64_t>& p, const Vec<uint64_t>& c)
     {
-        points->push_back(p);
-        colors->push_back(c);
+        points.push_back(p);
+        colors.push_back(c);
     }
 
     unsigned size()
     {
-        return points->size();
+        return points.size();
     }
 
     void resize(unsigned s)
     {
-        points->resize(s);
-        colors->resize(s);
+        points.resize(s);
+        colors.resize(s);
     }
 
     void clear()
     {
-        points->clear();
-        colors->clear();
+        points.clear();
+        colors.clear();
     }
 
-    AbstractBitVecArray* points;
-    AbstractBitVecArray* colors;
+    _BitVecArray points;
+    _BitVecArray colors;
 };
 
 struct BitVecPointCloudGrid {

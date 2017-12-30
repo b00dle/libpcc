@@ -74,13 +74,14 @@ struct BitValue : AbstractBitValue {
 };
 
 static void initBitValue(AbstractBitValue*& v, BitCount N, uint64_t val=0) {
-    if(v != nullptr && v->getN() != N) {
+    if(v != nullptr) {
+        if(v->getN() == N) {
+            v->set(val);
+            return;
+        }
         delete v;
     }
-    else if(v->getN() == N) {
-        v->set(val);
-        return;
-    }
+
     switch(N) {
         case BIT_1:
             v = new BitValue<BIT_1>(val); break;
