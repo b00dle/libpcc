@@ -8,6 +8,25 @@
 #include <cstdlib>
 #include <bitset>
 
+enum ComponentPrecision {
+    BIT_1 = 1,
+    BIT_2 = 2,
+    BIT_3 = 3,
+    BIT_4 = 4,
+    BIT_5 = 5,
+    BIT_6 = 6,
+    BIT_7 = 7,
+    BIT_8 = 8,
+    BIT_9 = 9,
+    BIT_10 = 10,
+    BIT_11 = 11,
+    BIT_12 = 12,
+    BIT_13 = 13,
+    BIT_14 = 14,
+    BIT_15 = 15,
+    BIT_16 = 16
+};
+
 struct AbstractBitVec {
     AbstractBitVec() = default;
 

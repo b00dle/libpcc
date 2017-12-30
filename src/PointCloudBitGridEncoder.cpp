@@ -405,17 +405,19 @@ size_t PointCloudBitGridEncoder::decodeCell(zmq::message_t &msg, CellHeader *c_h
             break;
     }
 
-    size_t bytes_p(cell->points->getByteSize());
+    size_t N = c_header->point_encoding;
+    size_t bytes_p(AbstractBitVecArray::getByteSize(c_header->num_elements, N, N, N));
     auto p_arr = new unsigned char[bytes_p];
     memcpy(p_arr, (unsigned char*) msg.data() + offset, bytes_p);
     offset += bytes_p;
     cell->points->unpack(p_arr, c_header->num_elements);
 
-    size_t bytes_c(cell->colors->getByteSize());
+    N = c_header->color_encoding;
+    size_t bytes_c(AbstractBitVecArray::getByteSize(c_header->num_elements, N, N, N));
     auto c_arr = new unsigned char[bytes_c];
-    memcpy(c_arr, (unsigned char*) msg.data() + offset, bytes_p);
+    memcpy(c_arr, (unsigned char*) msg.data() + offset, bytes_c);
     offset += bytes_c;
-    cell->points->unpack(c_arr, c_header->num_elements);
+    cell->colors->unpack(c_arr, c_header->num_elements);
 
     delete [] p_arr;
     delete [] c_arr;
@@ -490,7 +492,7 @@ size_t PointCloudBitGridEncoder::calcMessageSize(const std::vector<CellHeader *>
     return message_size;
 }
 
-PointCloudBitGridEncoder::ComponentPrecision PointCloudBitGridEncoder::getComponentPrecision(AbstractBitVecArray *arr) {
+ComponentPrecision PointCloudBitGridEncoder::getComponentPrecision(AbstractBitVecArray *arr) {
     return static_cast<ComponentPrecision>(arr->getNX());
 }
 

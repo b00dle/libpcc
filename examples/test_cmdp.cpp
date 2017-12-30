@@ -4,12 +4,7 @@
 #include <zmq.hpp>
 
 #include "../include/PointCloudGridEncoder.hpp"
-#include "../include/BitVec.hpp"
-#include "../include/BitVecPointCloudGrid.hpp"
-
-constexpr size_t div(size_t x) {
-    return x / 2;
-}
+#include "../include/PointCloudBitGridEncoder.hpp"
 
 int main(int argc, char* argv[]){
     /*
@@ -27,29 +22,6 @@ int main(int argc, char* argv[]){
     std::string endpoint("tcp://" + socket_name);
     socket.bind(endpoint.c_str());
     */
-    constexpr size_t N(10);
-    constexpr size_t N_(div(N));
-
-    AbstractBitVecArray* a = new UniformBitVecArr<N_>;
-    auto* u_a = dynamic_cast<UniformBitVecArr<N_>*>(a);
-    u_a->data.emplace_back(2,5,3);
-    u_a->data.emplace_back(4,2,1);
-
-    std::cout << "VEC BEFORE PACK\n";
-    std::cout << "  > " << u_a->data[0].x.to_ulong() << "," << u_a->data[0].y.to_ulong() << "," << u_a->data[0].z.to_ulong() << std::endl;
-    std::cout << "  > " << u_a->data[1].x.to_ulong() << "," << u_a->data[1].y.to_ulong() << "," << u_a->data[1].z.to_ulong() << std::endl;
-
-    unsigned char* p = u_a->pack();
-    u_a->unpack(p, 1);
-    delete [] p;
-
-    std::cout << "VEC AFTER PACK\n";
-    std::cout << "  > " << u_a->data[0].x.to_ulong() << "," << u_a->data[0].y.to_ulong() << "," << u_a->data[0].z.to_ulong() << std::endl;
-    std::cout << "  > " << u_a->data[1].x.to_ulong() << "," << u_a->data[1].y.to_ulong() << "," << u_a->data[1].z.to_ulong() << std::endl;
-
-    BitVecPointCloudGrid* bv_pc = new BitVecPointCloudGrid;
-    delete bv_pc;
-
     Measure t;
 
     PointCloud<Vec<float>, Vec<float>> pc(BoundingBox(Vec<float>(-1.01f,-1.01f,-1.01f), Vec<float>(1.01f,1.01f,1.01f)));
@@ -68,9 +40,11 @@ int main(int argc, char* argv[]){
     //// ENCODING
 
     PointCloudGridEncoder encoder;
+    PointCloudBitGridEncoder bit_encoder;
     t.startWatch();
-    zmq::message_t msg = encoder.encode<uint8_t, uint16_t>(&pc, Vec8(8,8,8));
-    
+    //zmq::message_t msg = encoder.encode<uint8_t, uint8_t>(&pc, Vec8(4,4,4));
+    zmq::message_t msg = bit_encoder.encode<BIT_5, BIT_6>(&pc, Vec8(4,4,4));
+
     std::cout << "ENCODING DONE in " << t.stopWatch() << "ms.\n";
     auto size_bytes = static_cast<int>(msg.size());
     int size_bit = size_bytes * 8;
@@ -84,14 +58,14 @@ int main(int argc, char* argv[]){
 
     PointCloud<Vec<float>, Vec<float>> pc2;
     t.startWatch();
-    bool success = encoder.decode(msg, &pc2);
+    //bool success = encoder.decode(msg, &pc2);
+    bool success = bit_encoder.decode(msg, &pc2);
     std::cout << "DECODING DONE in " << t.stopWatch() << "ms.\n";
-
+    std::cout << "  > size " << pc2.size() << "\n";
     if(success)
         std::cout << "  > success: YES\n";
     else
         std::cout << "  > success: NO\n";
-
 
     t.startWatch();
     std::cout << "  > MSE " << t.meanSquaredErrorPC(pc, pc2) << std::endl;

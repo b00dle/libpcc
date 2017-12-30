@@ -420,7 +420,6 @@ size_t PointCloudGridEncoder::encodeVariantCell(zmq::message_t& msg, GridCell<Va
     else if(c_type == VEC_UINT8) {
         auto c_arr = new uint8_t[cell->size()*3];
         size_t bytes_c_arr(cell->size()*3*sizeof(uint8_t));
-        std::cout << "FUUUUCK " << bytes_c_arr << std::endl;
         bool ok = true;
         Vec<uint8_t> v;
         for(unsigned i=0; i < cell->size(); ++i) {

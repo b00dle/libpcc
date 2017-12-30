@@ -14,7 +14,7 @@
 
 #include <vector>
 #include <string>
-
+#include <sstream>
 
 class PointCloudBitGridEncoder : public Encoder {
 
@@ -26,25 +26,14 @@ private:
         static size_t getByteSize() {
             return 3*sizeof(uint8_t) + 6*sizeof(float) + sizeof(unsigned);
         }
-    };
-
-    enum ComponentPrecision {
-        BIT_1 = 1,
-        BIT_2 = 2,
-        BIT_3 = 3,
-        BIT_4 = 4,
-        BIT_5 = 5,
-        BIT_6 = 6,
-        BIT_7 = 7,
-        BIT_8 = 8,
-        BIT_9 = 9,
-        BIT_10 = 10,
-        BIT_11 = 11,
-        BIT_12 = 12,
-        BIT_13 = 13,
-        BIT_14 = 14,
-        BIT_15 = 15,
-        BIT_16 = 16
+        const std::string toString() const {
+            std::stringstream ss;
+            ss << "GlobalHeader(dim=[" << (int) dimensions.x << "," << (int) dimensions.y << "," << (int) dimensions.z << "], ";
+            ss << "bb={[" << bounding_box.min.x << "," << bounding_box.min.y << "," << bounding_box.min.z << "];";
+            ss << "[" << bounding_box.max.x << "," << bounding_box.max.y << "," << bounding_box.max.z << "]}, ";
+            ss << "num_bl=" << num_blacklist << ")";
+            return ss.str();
+        }
     };
 
     struct CellHeader {
@@ -54,6 +43,14 @@ private:
         unsigned num_elements;
         static size_t getByteSize() { // cell_idx not encoded
             return 1*sizeof(unsigned)+ 2*sizeof(ComponentPrecision);
+        }
+        const std::string toString() const {
+            std::stringstream ss;
+            ss << "CellHeader(c_idx=" << cell_idx << ", ";
+            ss << "p_enc=" << point_encoding << ", ";
+            ss << "c_enc=" << color_encoding << ", ";
+            ss << "num_elmts=" << num_elements << ")";
+            return ss.str();
         }
     };
 
