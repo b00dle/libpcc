@@ -38,11 +38,11 @@ private:
 
     struct CellHeader {
         unsigned cell_idx; // not added to message (debug use)
-        ComponentPrecision point_encoding;
-        ComponentPrecision color_encoding;
+        BitCount point_encoding;
+        BitCount color_encoding;
         unsigned num_elements;
         static size_t getByteSize() { // cell_idx not encoded
-            return 1*sizeof(unsigned)+ 2*sizeof(ComponentPrecision);
+            return 1*sizeof(unsigned)+ 2*sizeof(BitCount);
         }
         const std::string toString() const {
             std::stringstream ss;
@@ -63,7 +63,7 @@ public:
      * M_P and M_C are the maximum precision used to
      * encode components of position (M_P) and color (M_C) in bits.
     */
-    template <ComponentPrecision M_P, ComponentPrecision M_C>
+    template <BitCount M_P, BitCount M_C>
     zmq::message_t encode(PointCloud<Vec<float>, Vec<float>>* point_cloud, const Vec8& grid_dimensions) {
         // Set properties for new grid
         pc_grid_->resize(grid_dimensions);
@@ -77,9 +77,9 @@ public:
 
 private:
     /* Fills pc_grid_ from given point_cloud and settings */
-    template <ComponentPrecision M_P, ComponentPrecision M_C>
+    template <BitCount M_P, BitCount M_C>
     void buildPointCloudGrid(PointCloud<Vec<float>, Vec<float>>* point_cloud) {
-        // init all cells to default ComponentPrecision
+        // init all cells to default BitCount
         // TODO: make adaptive
         for(auto c : pc_grid_->cells) {
             c->initPoints<M_P, M_P, M_P>();
@@ -185,8 +185,8 @@ private:
     /* Calculates the overall message size in bytes */
     size_t calcMessageSize(const std::vector<CellHeader*>&) const;
 
-    /* Determines the ComponentPrecision of given AbstractBitVecArray */
-    ComponentPrecision getComponentPrecision(AbstractBitVecArray* arr);
+    /* Determines the BitCount of given AbstractBitVecArray */
+    BitCount getComponentPrecision(AbstractBitVecArray* arr);
 
     BitVecPointCloudGrid* pc_grid_;
     GlobalHeader* header_;

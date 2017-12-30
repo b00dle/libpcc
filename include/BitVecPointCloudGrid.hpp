@@ -13,8 +13,8 @@ struct BitVecGridCell {
         : points(nullptr)
         , colors(nullptr)
     {
-        points = new BitVecArray<8,8,8>;
-        colors = new BitVecArray<8,8,8>;
+        points = new BitVecArray<BIT_8,BIT_8,BIT_8>;
+        colors = new BitVecArray<BIT_8,BIT_8,BIT_8>;
     }
 
     ~BitVecGridCell()
@@ -23,7 +23,7 @@ struct BitVecGridCell {
         delete colors;
     }
 
-    template<size_t NX, size_t NY, size_t NZ>
+    template<BitCount NX, BitCount NY, BitCount NZ>
     void initPoints()
     {
         if(points->getNX() != NX || points->getNY() != NY || points->getNZ() != NZ) {
@@ -33,7 +33,7 @@ struct BitVecGridCell {
         points->clear();
     }
 
-    template<size_t NX, size_t NY, size_t NZ>
+    template<BitCount NX, BitCount NY, BitCount NZ>
     void initColors()
     {
         if(colors->getNX() != NX || colors->getNY() != NY || colors->getNZ() != NZ) {
@@ -89,7 +89,7 @@ struct BitVecPointCloudGrid {
     }
 
     void deleteCells() {
-        while(cells.size() > 0) {
+        while(!cells.empty()) {
             cells.back()->clear();
             delete cells.back();
             cells.pop_back();

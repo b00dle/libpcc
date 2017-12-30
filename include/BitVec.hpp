@@ -8,7 +8,7 @@
 #include <cstdlib>
 #include <bitset>
 
-enum ComponentPrecision {
+enum BitCount {
     BIT_1 = 1,
     BIT_2 = 2,
     BIT_3 = 3,
@@ -36,11 +36,11 @@ struct AbstractBitVec {
         return getNX() + getNY() + getNZ();
     }
 
-    virtual size_t getNX() const = 0;
+    virtual BitCount getNX() const = 0;
 
-    virtual size_t getNY() const = 0;
+    virtual BitCount getNY() const = 0;
 
-    virtual size_t getNZ() const = 0;
+    virtual BitCount getNZ() const = 0;
 
     virtual uint64_t getX() const = 0;
 
@@ -55,7 +55,7 @@ struct AbstractBitVec {
     virtual void setZ(uint64_t z_t) = 0;
 };
 
-template <size_t NX, size_t NY, size_t NZ>
+template <BitCount NX, BitCount NY, BitCount NZ>
 struct BitVec : AbstractBitVec {
     explicit BitVec(uint64_t t_x = 0, uint64_t t_y = 0, uint64_t t_z = 0)
         : AbstractBitVec()
@@ -75,15 +75,15 @@ struct BitVec : AbstractBitVec {
 
     ~BitVec() override = default;
 
-    size_t getNX() const override {
+    BitCount getNX() const override {
         return NX;
     }
 
-    size_t getNY() const override {
+    BitCount getNY() const override {
         return NY;
     }
 
-    size_t getNZ() const override {
+    BitCount getNZ() const override {
         return NZ;
     }
 
@@ -126,7 +126,7 @@ struct BitVec : AbstractBitVec {
         return packed;
     }
 
-    void setFromPackedBitset(const std::bitset<NX + NY + NZ> &packed) {
+    void setFromPackedBitset(const std::bitset<NX+NY+NZ> &packed) {
         for(size_t i = 0; i < NX; ++i)
             x[i] = packed[i];
         for(size_t i = 0; i < NY; ++i)
@@ -140,7 +140,7 @@ struct BitVec : AbstractBitVec {
     std::bitset<NZ> z;
 };
 
-template <size_t N>
+template <BitCount N>
 struct UniformBitVec : BitVec<N,N,N> {};
 
 struct AbstractBitVecArray {
@@ -148,18 +148,18 @@ struct AbstractBitVecArray {
 
     virtual ~AbstractBitVecArray() = default;
 
-    static size_t getByteSize(unsigned num_elmts, size_t NX, size_t NY, size_t NZ) {
+    static size_t getByteSize(unsigned num_elmts, BitCount NX, BitCount NY, BitCount NZ) {
         size_t bit_size = num_elmts * (NX+NY+NZ);
         return static_cast<size_t>(ceil(bit_size/8.0f));
     }
 
     virtual size_t getByteSize() const = 0;
 
-    virtual size_t getNX() const = 0;
+    virtual BitCount getNX() const = 0;
 
-    virtual size_t getNY() const = 0;
+    virtual BitCount getNY() const = 0;
 
-    virtual size_t getNZ() const = 0;
+    virtual BitCount getNZ() const = 0;
 
     virtual Vec<uint64_t> const operator[](unsigned i) = 0;
 
@@ -176,7 +176,7 @@ struct AbstractBitVecArray {
     virtual void clear() = 0;
 };
 
-template <size_t NX, size_t NY, size_t NZ>
+template <BitCount NX, BitCount NY, BitCount NZ>
 struct BitVecArray : AbstractBitVecArray {
     BitVecArray()
         : AbstractBitVecArray()
@@ -191,15 +191,15 @@ struct BitVecArray : AbstractBitVecArray {
         return AbstractBitVecArray::getByteSize(static_cast<unsigned>(data.size()), NX, NY, NZ);
     }
 
-    size_t getNX() const override {
+    BitCount getNX() const override {
         return NX;
     }
 
-    size_t getNY() const override {
+    BitCount getNY() const override {
         return NY;
     }
 
-    size_t getNZ() const override {
+    BitCount getNZ() const override {
         return NZ;
     }
 
@@ -311,7 +311,7 @@ struct BitVecArray : AbstractBitVecArray {
     std::vector<BitVec<NX,NY,NZ>> data;
 };
 
-template <size_t N>
+template <BitCount N>
 struct UniformBitVecArr : BitVecArray<N,N,N> {};
 
 #endif //BITVECTOR_HPP

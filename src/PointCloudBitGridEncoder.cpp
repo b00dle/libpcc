@@ -55,12 +55,12 @@ bool PointCloudBitGridEncoder::extractPointCloudFromGrid(PointCloud<Vec<float>, 
                     y_idx * pc_grid_->dimensions.x +
                     z_idx * pc_grid_->dimensions.x * pc_grid_->dimensions.y;
                 cell = pc_grid_->cells[cell_idx];
-                p_bits.x = static_cast<uint8_t>(cell->points->getNX());
-                p_bits.y = static_cast<uint8_t>(cell->points->getNY());
-                p_bits.z = static_cast<uint8_t>(cell->points->getNZ());
-                c_bits.x = static_cast<uint8_t>(cell->colors->getNX());
-                c_bits.y = static_cast<uint8_t>(cell->colors->getNY());
-                c_bits.z = static_cast<uint8_t>(cell->colors->getNZ());
+                p_bits.x = cell->points->getNX();
+                p_bits.y = cell->points->getNY();
+                p_bits.z = cell->points->getNZ();
+                c_bits.x = cell->colors->getNX();
+                c_bits.y = cell->colors->getNY();
+                c_bits.z = cell->colors->getNZ();
                 glob_cell_min = Vec<float>(cell_range.x*x_idx, cell_range.y*y_idx, cell_range.z*z_idx);
                 glob_cell_min += pc_grid_->bounding_box.min;
                 for(unsigned i=0; i < cell->size(); ++i) {
@@ -267,7 +267,7 @@ size_t PointCloudBitGridEncoder::encodeCellHeader(zmq::message_t& msg, CellHeade
     memcpy((unsigned char*) msg.data() + offset, (unsigned char*) num_elmts , bytes_num_elmts);
     offset += bytes_num_elmts;
 
-    auto encoding = new ComponentPrecision[2];
+    auto encoding = new BitCount[2];
     size_t bytes_enc(2*sizeof(VariantVecType));
     encoding[0] = c_header->point_encoding;
     encoding[1] = c_header->color_encoding;
@@ -288,7 +288,7 @@ size_t PointCloudBitGridEncoder::decodeCellHeader(zmq::message_t& msg, CellHeade
     c_header->num_elements = num_elmts[0];
     offset += bytes_num_elmts;
 
-    auto encoding = new ComponentPrecision[2];
+    auto encoding = new BitCount[2];
     size_t bytes_enc(2* sizeof(VariantVecType));
     memcpy((unsigned char*) encoding, (unsigned char*) msg.data() + offset, bytes_enc);
     c_header->point_encoding = encoding[0];
@@ -405,7 +405,7 @@ size_t PointCloudBitGridEncoder::decodeCell(zmq::message_t &msg, CellHeader *c_h
             break;
     }
 
-    size_t N = c_header->point_encoding;
+    BitCount N = c_header->point_encoding;
     size_t bytes_p(AbstractBitVecArray::getByteSize(c_header->num_elements, N, N, N));
     auto p_arr = new unsigned char[bytes_p];
     memcpy(p_arr, (unsigned char*) msg.data() + offset, bytes_p);
@@ -492,8 +492,8 @@ size_t PointCloudBitGridEncoder::calcMessageSize(const std::vector<CellHeader *>
     return message_size;
 }
 
-ComponentPrecision PointCloudBitGridEncoder::getComponentPrecision(AbstractBitVecArray *arr) {
-    return static_cast<ComponentPrecision>(arr->getNX());
+BitCount PointCloudBitGridEncoder::getComponentPrecision(AbstractBitVecArray *arr) {
+    return arr->getNX();
 }
 
 

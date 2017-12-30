@@ -22,6 +22,7 @@ int main(int argc, char* argv[]){
     std::string endpoint("tcp://" + socket_name);
     socket.bind(endpoint.c_str());
     */
+
     Measure t;
 
     PointCloud<Vec<float>, Vec<float>> pc(BoundingBox(Vec<float>(-1.01f,-1.01f,-1.01f), Vec<float>(1.01f,1.01f,1.01f)));
