@@ -432,13 +432,13 @@ size_t PointCloudBitGridEncoder::calcMessageSize(const std::vector<CellHeader *>
     for(auto c_header: cell_headers) {
         num_elements += c_header->num_elements;
         // size of elements for one cell
-        message_size += AbstractBitVecArray::getByteSize(
+        message_size += BitVecArray::getByteSize(
             c_header->num_elements,
             c_header->point_encoding_x,
             c_header->point_encoding_y,
             c_header->point_encoding_z
         );
-        message_size += AbstractBitVecArray::getByteSize(
+        message_size += BitVecArray::getByteSize(
                 c_header->num_elements,
                 c_header->color_encoding_x,
                 c_header->color_encoding_y,

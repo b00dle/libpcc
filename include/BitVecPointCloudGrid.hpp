@@ -46,8 +46,8 @@ struct BitVecGridCell {
         colors.clear();
     }
 
-    _BitVecArray points;
-    _BitVecArray colors;
+    BitVecArray points;
+    BitVecArray colors;
 };
 
 struct BitVecPointCloudGrid {

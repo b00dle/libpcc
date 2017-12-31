@@ -24,7 +24,23 @@ enum BitCount {
     BIT_13 = 13,
     BIT_14 = 14,
     BIT_15 = 15,
-    BIT_16 = 16
+    BIT_16 = 16,
+    BIT_17 = 17,
+    BIT_18 = 18,
+    BIT_19 = 19,
+    BIT_20 = 20,
+    BIT_21 = 21,
+    BIT_22 = 22,
+    BIT_23 = 23,
+    BIT_24 = 24,
+    BIT_25 = 25,
+    BIT_26 = 26,
+    BIT_27 = 27,
+    BIT_28 = 28,
+    BIT_29 = 29,
+    BIT_30 = 30,
+    BIT_31 = 31,
+    BIT_32 = 32
 };
 
 struct AbstractBitValue {
@@ -115,41 +131,44 @@ static void initBitValue(AbstractBitValue*& v, BitCount N, uint64_t val=0) {
             v = new BitValue<BIT_15>(val); break;
         case BIT_16:
             v = new BitValue<BIT_16>(val); break;
+        case BIT_17:
+            v = new BitValue<BIT_17>(val); break;
+        case BIT_18:
+            v = new BitValue<BIT_18>(val); break;
+        case BIT_19:
+            v = new BitValue<BIT_19>(val); break;
+        case BIT_20:
+            v = new BitValue<BIT_20>(val); break;
+        case BIT_21:
+            v = new BitValue<BIT_21>(val); break;
+        case BIT_22:
+            v = new BitValue<BIT_22>(val); break;
+        case BIT_23:
+            v = new BitValue<BIT_23>(val); break;
+        case BIT_24:
+            v = new BitValue<BIT_24>(val); break;
+        case BIT_25:
+            v = new BitValue<BIT_25>(val); break;
+        case BIT_26:
+            v = new BitValue<BIT_26>(val); break;
+        case BIT_27:
+            v = new BitValue<BIT_27>(val); break;
+        case BIT_28:
+            v = new BitValue<BIT_28>(val); break;
+        case BIT_29:
+            v = new BitValue<BIT_29>(val); break;
+        case BIT_30:
+            v = new BitValue<BIT_30>(val); break;
+        case BIT_31:
+            v = new BitValue<BIT_31>(val); break;
+        case BIT_32:
+            v = new BitValue<BIT_32>(val); break;
     }
 }
 
-struct AbstractBitVec {
-    AbstractBitVec() = default;
-
-    virtual ~AbstractBitVec() = default;
-
-    size_t getSize() const {
-        return getNX() + getNY() + getNZ();
-    }
-
-    virtual BitCount getNX() const = 0;
-
-    virtual BitCount getNY() const = 0;
-
-    virtual BitCount getNZ() const = 0;
-
-    virtual uint64_t getX() const = 0;
-
-    virtual uint64_t getY() const = 0;
-
-    virtual uint64_t getZ() const = 0;
-
-    virtual void setX(uint64_t x_t) = 0;
-
-    virtual void setY(uint64_t y_t) = 0;
-
-    virtual void setZ(uint64_t z_t) = 0;
-};
-
-struct _BitVec : AbstractBitVec {
-    explicit _BitVec(uint64_t t_x=0, uint64_t t_y=0, uint64_t t_z=0, BitCount NX=BIT_8, BitCount NY=BIT_8, BitCount NZ=BIT_8)
-        : AbstractBitVec()
-        , x(nullptr)
+struct BitVec {
+    explicit BitVec(uint64_t t_x=0, uint64_t t_y=0, uint64_t t_z=0, BitCount NX=BIT_8, BitCount NY=BIT_8, BitCount NZ=BIT_8)
+        : x(nullptr)
         , y(nullptr)
         , z(nullptr)
     {
@@ -158,9 +177,8 @@ struct _BitVec : AbstractBitVec {
         initZ(NZ, t_z);
     }
 
-    explicit _BitVec(const std::vector<bool>& packed, BitCount NX=BIT_8, BitCount NY=BIT_8, BitCount NZ=BIT_8)
-        : AbstractBitVec()
-        , x(nullptr)
+    explicit BitVec(const std::vector<bool>& packed, BitCount NX=BIT_8, BitCount NY=BIT_8, BitCount NZ=BIT_8)
+        : x(nullptr)
         , y(nullptr)
         , z(nullptr)
     {
@@ -170,66 +188,80 @@ struct _BitVec : AbstractBitVec {
         setFromPackedBitset(packed);
     }
 
-    ~_BitVec() override
+    ~BitVec()
     {
         delete x;
         delete y;
         delete z;
     }
 
-    void initX(BitCount N, uint64_t val=0) {
+    void initX(BitCount N, uint64_t val=0)
+    {
         initBitValue(x, N, val);
     }
 
-    void initY(BitCount N, uint64_t val=0) {
+    void initY(BitCount N, uint64_t val=0)
+    {
         initBitValue(y, N, val);
     }
 
-    void initZ(BitCount N, uint64_t val=0) {
+    void initZ(BitCount N, uint64_t val=0)
+    {
         initBitValue(z, N, val);
     }
 
-    BitCount getNX() const override {
+    BitCount getNX() const
+    {
         return x->getN();
     }
 
-    BitCount getNY() const override {
+    BitCount getNY() const
+    {
         return y->getN();
     }
 
-    BitCount getNZ() const override {
+    BitCount getNZ() const
+    {
         return z->getN();
     }
 
-    Vec<uint64_t> const get() {
+    Vec<uint64_t> const get()
+    {
         return Vec<uint64_t>(getX(), getY(), getZ());
     }
 
-    uint64_t getX() const override {
+    uint64_t getX() const
+    {
         return x->get();
     }
 
-    uint64_t getY() const override {
+    uint64_t getY() const
+    {
         return y->get();
     }
 
-    uint64_t getZ() const override {
+    uint64_t getZ() const
+    {
         return z->get();
     }
 
-    void setX(uint64_t x_t) override {
+    void setX(uint64_t x_t)
+    {
         x->set(x_t);
     }
 
-    void setY(uint64_t y_t) override {
+    void setY(uint64_t y_t)
+    {
         y->set(y_t);
     }
 
-    void setZ(uint64_t z_t) {
+    void setZ(uint64_t z_t)
+    {
         z->set(z_t);
     }
 
-    const std::vector<bool> getPackedBitset() const {
+    const std::vector<bool> getPackedBitset() const
+    {
         std::vector<bool> packed;
         packed.resize(x->getN()+y->getN()+z->getN());
         for(size_t i = 0; i < x->getN(); ++i)
@@ -241,7 +273,8 @@ struct _BitVec : AbstractBitVec {
         return packed;
     }
 
-    void setFromPackedBitset(const std::vector<bool> &packed) {
+    void setFromPackedBitset(const std::vector<bool> &packed)
+    {
         if(packed.size() != x->getN()+y->getN()+z->getN())
             return;
         for(size_t i = 0; i < x->getN(); ++i)
@@ -257,15 +290,15 @@ struct _BitVec : AbstractBitVec {
     AbstractBitValue* z;
 };
 
-struct _BitVecArray {
-    _BitVecArray(BitCount t_NX=BIT_8, BitCount t_NY=BIT_8, BitCount t_NZ=BIT_8)
+struct BitVecArray {
+    BitVecArray(BitCount t_NX=BIT_8, BitCount t_NY=BIT_8, BitCount t_NZ=BIT_8)
         : data()
         , NX(t_NX)
         , NY(t_NY)
         , NZ(t_NZ)
     {}
 
-    ~_BitVecArray()
+    ~BitVecArray()
     {
         while(!data.empty()) {
             delete data.back();
@@ -273,25 +306,43 @@ struct _BitVecArray {
         }
     }
 
-    size_t getByteSize() const
+    static size_t getBitSize(size_t num_elmnts, BitCount nx, BitCount ny, BitCount nz)
     {
-        size_t bit_size = data.size() * (NX+NY+NZ);
-        return static_cast<size_t>(ceil(bit_size/8.0f));
+        return num_elmnts * (nx+ny+nz);
     }
 
-    BitCount getNX() const {
+    size_t getBitSize() const
+    {
+        return BitVecArray::getBitSize(data.size(), NX, NY, NZ);
+    }
+
+    static size_t getByteSize(size_t num_elmnts, BitCount nx, BitCount ny, BitCount nz)
+    {
+        return static_cast<size_t>(ceil(getBitSize(num_elmnts, nx, ny, nz)/8.0f));
+    }
+
+    size_t getByteSize() const
+    {
+        return static_cast<size_t>(ceil(getBitSize()/8.0f));
+    }
+
+    BitCount getNX() const
+    {
         return NX;
     }
 
-    BitCount getNY() const {
+    BitCount getNY() const
+    {
         return NY;
     }
 
-    BitCount getNZ() const {
+    BitCount getNZ() const
+    {
         return NZ;
     }
 
-    void init(BitCount t_NX, BitCount t_NY, BitCount t_NZ) {
+    void init(BitCount t_NX, BitCount t_NY, BitCount t_NZ)
+    {
         clear();
         if(NX == t_NX && NY == t_NY && NZ == t_NZ)
             return;
@@ -300,7 +351,8 @@ struct _BitVecArray {
         NZ = t_NZ;
     }
 
-    Vec<uint64_t> const operator[](unsigned i) {
+    Vec<uint64_t> const operator[](unsigned i)
+    {
         return data[i]->get();
     }
 
@@ -309,7 +361,8 @@ struct _BitVecArray {
      * num_elements should hold the total number of BitVec elements
      * encoded by packed_data.
     */
-    void unpack(unsigned char* packed_data, size_t num_elmnts) {
+    void unpack(unsigned char* packed_data, size_t num_elmnts)
+    {
         data.clear();
         data.resize(num_elmnts);
 
@@ -324,7 +377,7 @@ struct _BitVecArray {
                 elmt[current_bit] = byte[byte_idx];
                 current_bit = (current_bit + 1) % elmt.size();
                 if(current_bit == 0) {
-                    data[elmt_idx] = new _BitVec(elmt, NX, NY, NZ);
+                    data[elmt_idx] = new BitVec(elmt, NX, NY, NZ);
                     elmt_idx++;
                     if(elmt_idx == data.size())
                         break;
@@ -387,7 +440,7 @@ struct _BitVecArray {
 
     void push_back(const Vec<uint64_t>& v)
     {
-        data.push_back(new _BitVec(v.x, v.y, v.z, NX, NY, NZ));
+        data.push_back(new BitVec(v.x, v.y, v.z, NX, NY, NZ));
     }
 
     unsigned size() const
@@ -409,270 +462,10 @@ struct _BitVecArray {
     }
 
 private:
-    std::vector<_BitVec*> data;
+    std::vector<BitVec*> data;
     BitCount NX;
     BitCount NY;
     BitCount NZ;
 };
-
-template <BitCount NX, BitCount NY, BitCount NZ>
-struct BitVec : AbstractBitVec {
-    explicit BitVec(uint64_t t_x = 0, uint64_t t_y = 0, uint64_t t_z = 0)
-        : AbstractBitVec()
-        , x(t_x)
-        , y(t_y)
-        , z(t_z)
-    {}
-
-    explicit BitVec(const std::bitset<NX+NY+NZ>& packed)
-        : AbstractBitVec()
-        , x()
-        , y()
-        , z()
-    {
-        setFromPackedBitset(packed);
-    }
-
-    ~BitVec() override = default;
-
-    BitCount getNX() const override {
-        return NX;
-    }
-
-    BitCount getNY() const override {
-        return NY;
-    }
-
-    BitCount getNZ() const override {
-        return NZ;
-    }
-
-    Vec<uint64_t> const get() {
-        return Vec<uint64_t>(getX(), getY(), getZ());
-    }
-
-    uint64_t getX() const override {
-        return x.to_ulong();
-    }
-
-    uint64_t getY() const override {
-        return y.to_ulong();
-    }
-
-    uint64_t getZ() const override {
-        return z.to_ulong();
-    }
-
-    void setX(uint64_t x_t) override {
-        x = std::bitset<NX>(x_t);
-    }
-
-    void setY(uint64_t y_t) override {
-        y = std::bitset<NY>(y_t);
-    }
-
-    void setZ(uint64_t z_t) {
-        z = std::bitset<NZ>(z_t);
-    }
-
-    const std::bitset<NX+NY+NZ> getPackedBitset() const {
-        std::bitset<NX+NY+NZ> packed;
-        for(size_t i = 0; i < NX; ++i)
-            packed[i] = x[i];
-        for(size_t i = 0; i < NY; ++i)
-            packed[NX+i] = y[i];
-        for(size_t i = 0; i < NZ; ++i)
-            packed[NX+NY+i] = x[i];
-        return packed;
-    }
-
-    void setFromPackedBitset(const std::bitset<NX+NY+NZ> &packed) {
-        for(size_t i = 0; i < NX; ++i)
-            x[i] = packed[i];
-        for(size_t i = 0; i < NY; ++i)
-            y[i] = packed[NX+i];
-        for(size_t i = 0; i < NZ; ++i)
-            z[i] = packed[NX+NY+i];
-    }
-
-    std::bitset<NX> x;
-    std::bitset<NY> y;
-    std::bitset<NZ> z;
-};
-
-
-template <BitCount N>
-struct UniformBitVec : BitVec<N,N,N> {};
-
-struct AbstractBitVecArray {
-    AbstractBitVecArray() = default;
-
-    virtual ~AbstractBitVecArray() = default;
-
-    static size_t getByteSize(unsigned num_elmts, BitCount NX, BitCount NY, BitCount NZ) {
-        size_t bit_size = num_elmts * (NX+NY+NZ);
-        return static_cast<size_t>(ceil(bit_size/8.0f));
-    }
-
-    virtual size_t getByteSize() const = 0;
-
-    virtual BitCount getNX() const = 0;
-
-    virtual BitCount getNY() const = 0;
-
-    virtual BitCount getNZ() const = 0;
-
-    virtual Vec<uint64_t> const operator[](unsigned i) = 0;
-
-    virtual void unpack(unsigned char* packed_data, size_t num_elmnts) = 0;
-
-    virtual unsigned char* pack() = 0;
-
-    virtual void push_back(const Vec<uint64_t>&) = 0;
-
-    virtual unsigned size() const = 0;
-
-    virtual void resize(unsigned s) = 0;
-
-    virtual void clear() = 0;
-};
-
-template <BitCount NX, BitCount NY, BitCount NZ>
-struct BitVecArray : AbstractBitVecArray {
-    BitVecArray()
-        : AbstractBitVecArray()
-        , data()
-    {}
-
-    ~BitVecArray() override
-    {}
-
-    size_t getByteSize() const override
-    {
-        return AbstractBitVecArray::getByteSize(static_cast<unsigned>(data.size()), NX, NY, NZ);
-    }
-
-    BitCount getNX() const override {
-        return NX;
-    }
-
-    BitCount getNY() const override {
-        return NY;
-    }
-
-    BitCount getNZ() const override {
-        return NZ;
-    }
-
-    Vec<uint64_t> const operator[](unsigned i) override {
-        return data[i].get();
-    }
-
-    /*
-     * Fills data from packed_data.
-     * num_elements should hold the total number of BitVec elements
-     * encoded by packed_data.
-    */
-    void unpack(unsigned char* packed_data, size_t num_elmnts) {
-        data.clear();
-        data.resize(num_elmnts);
-
-        size_t elmt_idx = 0;
-        std::bitset<NX+NY+NZ> elmt;
-        size_t current_bit = 0;
-        std::bitset<8> byte;
-        for(size_t i = 0; i < getByteSize(); ++i) {
-            byte = std::bitset<8>(static_cast<ulong>(packed_data[i]));
-            for(size_t byte_idx = 0; byte_idx < byte.size(); ++byte_idx) {
-                elmt[current_bit] = byte[byte_idx];
-                current_bit = (current_bit + 1) % elmt.size();
-                if(current_bit == 0) {
-                    data[elmt_idx] = BitVec<NX,NY,NZ>(elmt);
-                    elmt_idx++;
-                    if(elmt_idx == data.size())
-                        break;
-                }
-            }
-
-            if(elmt_idx == data.size())
-                break;
-        }
-    }
-
-    /* Returns a byte array of minimum size encoding data. */
-    unsigned char* pack()
-    {
-        unsigned char* packed_data = new unsigned char[getByteSize()];
-        std::bitset<8> byte;
-        size_t current_byte = 0;
-        size_t bit_idx = 0;
-        // Pack all BitVec
-        for(auto v: data) {
-            // pack x-component
-            for(size_t i = 0; i < NX; ++i) {
-                byte[bit_idx] = v.x[i];
-                bit_idx = (bit_idx + 1) % 8;
-                if(bit_idx == 0) {
-                    packed_data[current_byte] = static_cast<unsigned char>(byte.to_ulong());
-                    ++current_byte;
-                }
-            }
-            // pack y-component
-            for(size_t i = 0; i < NY; ++i) {
-                byte[bit_idx] = v.y[i];
-                bit_idx = (bit_idx + 1) % 8;
-                if(bit_idx == 0) {
-                    packed_data[current_byte] = static_cast<unsigned char>(byte.to_ulong());
-                    ++current_byte;
-                }
-            }
-            // pack z-component
-            for(size_t i = 0; i < NZ; ++i) {
-                byte[bit_idx] = v.z[i];
-                bit_idx = (bit_idx + 1) % 8;
-                if(bit_idx == 0) {
-                    packed_data[current_byte] = static_cast<unsigned char>(byte.to_ulong());
-                    ++current_byte;
-                }
-            }
-        }
-
-        // add padding for last byte if necessary
-        if(bit_idx != 0) {
-            while(bit_idx != 0) {
-                byte[bit_idx] = false;
-                bit_idx = (bit_idx + 1) % 8;
-            }
-            packed_data[current_byte] = static_cast<unsigned char>(byte.to_ulong());
-        }
-
-        return packed_data;
-    }
-
-    void push_back(const Vec<uint64_t>& v) override
-    {
-        data.emplace_back(v.x, v.y, v.z);
-    }
-
-    unsigned size() const override
-    {
-        return static_cast<unsigned>(data.size());
-    }
-
-    void resize(unsigned s) override
-    {
-        data.resize(s);
-    }
-
-    void clear() override
-    {
-        data.clear();
-    }
-
-    std::vector<BitVec<NX,NY,NZ>> data;
-};
-
-template <BitCount N>
-struct UniformBitVecArr : BitVecArray<N,N,N> {};
 
 #endif //BITVECTOR_HPP
