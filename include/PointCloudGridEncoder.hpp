@@ -24,6 +24,12 @@
 class PointCloudGridEncoder : public Encoder {
 
 public:
+    /*
+     * Data transfer object used for exposing
+     * configurable settings for encoding process.
+     * The value will not be changed from within this class,
+     * thus it will only ever be changed by user.
+    */
     struct EncodingSettings {
         EncodingSettings()
             : grid_dimensions(4,4,4)
