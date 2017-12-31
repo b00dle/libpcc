@@ -29,14 +29,14 @@ public:
     struct EncodingSettings {
         EncodingSettings()
             : grid_dimensions(4,4,4)
-            , positions_precision(BIT_8, BIT_8, BIT_8)
+            , point_precision(BIT_8, BIT_8, BIT_8)
             , color_precision(BIT_8, BIT_8, BIT_8)
         {}
 
         EncodingSettings(const EncodingSettings&) = default;
 
         Vec8 grid_dimensions;
-        Vec<BitCount> positions_precision;
+        Vec<BitCount> point_precision;
         Vec<BitCount> color_precision;
     };
 

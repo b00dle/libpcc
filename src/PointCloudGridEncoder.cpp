@@ -23,7 +23,7 @@ zmq::message_t PointCloudGridEncoder::encode(PointCloud<Vec<float>, Vec<float>>*
     // Set properties for new grid
     pc_grid_->resize(settings.grid_dimensions);
     pc_grid_->bounding_box = point_cloud->bounding_box;
-    buildPointCloudGrid(point_cloud, settings.positions_precision, settings.color_precision);
+    buildPointCloudGrid(point_cloud, settings.point_precision, settings.color_precision);
     return encodePointCloudGrid();
 };
 

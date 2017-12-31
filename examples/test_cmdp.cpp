@@ -41,7 +41,7 @@ int main(int argc, char* argv[]){
 
     PointCloudGridEncoder encoder;
     encoder.settings.grid_dimensions = Vec8(4,4,4);
-    encoder.settings.positions_precision = Vec<BitCount>(BIT_8,BIT_8,BIT_8);
+    encoder.settings.point_precision = Vec<BitCount>(BIT_8,BIT_8,BIT_8);
     encoder.settings.color_precision = Vec<BitCount>(BIT_8,BIT_8,BIT_8);
 
     t.startWatch();
