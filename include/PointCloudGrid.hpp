@@ -5,7 +5,7 @@
 #ifndef LIBPCC_BIT_VEC_POINT_CLOUD_GRID_HPP
 #define LIBPCC_BIT_VEC_POINT_CLOUD_GRID_HPP
 
-#include "../include/BitVec.hpp"
+#include "../include/BitVecArray.hpp"
 #include "../include/PointCloud.hpp"
 
 struct GridCell {

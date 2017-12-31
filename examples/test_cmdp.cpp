@@ -42,7 +42,7 @@ int main(int argc, char* argv[]){
     PointCloudGridEncoder encoder;
     t.startWatch();
     Vec8 GRID_DIMENSIONS(8,8,8);
-    Vec<BitCount> POS_PRECISION(BIT_8,BIT_8,BIT_8);
+    Vec<BitCount> POS_PRECISION(BIT_7,BIT_18,BIT_10);
     Vec<BitCount> CLR_PRECISION(BIT_5,BIT_6,BIT_5);
     zmq::message_t msg = encoder.encode(&pc, GRID_DIMENSIONS, POS_PRECISION, CLR_PRECISION);
 

@@ -18,12 +18,51 @@ PointCloudGridEncoder::~PointCloudGridEncoder()
     delete header_;
 }
 
+zmq::message_t PointCloudGridEncoder::encode(PointCloud<Vec<float>, Vec<float>>* point_cloud, const Vec8& grid_dimensions, const Vec<BitCount>& M_P, const Vec<BitCount>& M_C)
+{
+    // Set properties for new grid
+    pc_grid_->resize(grid_dimensions);
+    pc_grid_->bounding_box = point_cloud->bounding_box;
+    buildPointCloudGrid(point_cloud, M_P, M_C);
+    return encodePointCloudGrid();
+};
+
 bool PointCloudGridEncoder::decode(zmq::message_t &msg, PointCloud<Vec<float>, Vec<float>> *point_cloud)
 {
     if(!decodePointCloudGrid(msg))
         return false;
     std::cout << "DECODE GRID done\n";
     return extractPointCloudFromGrid(point_cloud);
+}
+
+void PointCloudGridEncoder::buildPointCloudGrid(PointCloud<Vec<float>, Vec<float>>* point_cloud, const Vec<BitCount>& M_P, const Vec<BitCount>& M_C) {
+    // init all cells to default BitCount
+    for(auto c : pc_grid_->cells) {
+        c->initPoints(M_P.x, M_P.y, M_P.z);
+        c->initColors(M_C.x, M_C.y, M_C.z);
+    }
+    Vec<float> cell_range = pc_grid_->bounding_box.calcRange();
+    Vec<float> pos_cell;
+    cell_range.x /= (float) pc_grid_->dimensions.x;
+    cell_range.y /= (float) pc_grid_->dimensions.y;
+    cell_range.z /= (float) pc_grid_->dimensions.z;
+    BoundingBox bb_cell(Vec<float>(0.0f,0.0f,0.0f), cell_range);
+    BoundingBox bb_clr(Vec<float>(0.0f,0.0f,0.0f), Vec<float>(1.0f,1.0f,1.0f));
+    Vec<uint64_t> compressed_pos;
+    Vec<uint64_t> compressed_clr;
+    Vec<uint8_t> p_bits(M_P.x, M_P.y, M_P.z);
+    Vec<uint8_t> c_bits(M_C.x, M_C.y, M_C.z);
+    unsigned progress = 0, new_progress = 0;
+    for(unsigned i=0; i < point_cloud->size(); ++i) {
+        if (!pc_grid_->bounding_box.contains(point_cloud->points[i]))
+            continue;
+        unsigned cell_idx = calcGridCellIndex(point_cloud->points[i], cell_range);
+        pos_cell = mapToCell(point_cloud->points[i], cell_range);
+        compressed_pos = mapVec(pos_cell, bb_cell, p_bits);
+        compressed_clr = mapVec(point_cloud->colors[i], bb_clr, c_bits);
+        (*pc_grid_)[cell_idx]->addVoxel(compressed_pos, compressed_clr);
+    }
+    std::cout << "DONE building grid\n";
 }
 
 bool PointCloudGridEncoder::extractPointCloudFromGrid(PointCloud<Vec<float>, Vec<float>>* point_cloud)
