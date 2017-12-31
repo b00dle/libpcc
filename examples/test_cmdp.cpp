@@ -40,11 +40,12 @@ int main(int argc, char* argv[]){
     //// ENCODING
 
     PointCloudGridEncoder encoder;
+    encoder.settings.grid_dimensions = Vec8(4,4,4);
+    encoder.settings.positions_precision = Vec<BitCount>(BIT_8,BIT_8,BIT_8);
+    encoder.settings.color_precision = Vec<BitCount>(BIT_8,BIT_8,BIT_8);
+
     t.startWatch();
-    Vec8 GRID_DIMENSIONS(8,8,8);
-    Vec<BitCount> POS_PRECISION(BIT_7,BIT_18,BIT_10);
-    Vec<BitCount> CLR_PRECISION(BIT_5,BIT_6,BIT_5);
-    zmq::message_t msg = encoder.encode(&pc, GRID_DIMENSIONS, POS_PRECISION, CLR_PRECISION);
+    zmq::message_t msg = encoder.encode(&pc);
 
     std::cout << "ENCODING DONE in " << t.stopWatch() << "ms.\n";
     auto size_bytes = static_cast<int>(msg.size());

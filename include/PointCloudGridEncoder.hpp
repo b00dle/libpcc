@@ -23,6 +23,20 @@
 */
 class PointCloudGridEncoder : public Encoder {
 
+public:
+    struct EncodingSettings {
+        EncodingSettings()
+            : grid_dimensions(4,4,4)
+            , positions_precision(BIT_8, BIT_8, BIT_8)
+            , color_precision(BIT_8, BIT_8, BIT_8)
+        {}
+        Vec8 grid_dimensions;
+        Vec<BitCount> positions_precision;
+        Vec<BitCount> color_precision;
+    };
+
+    EncodingSettings settings;
+
 private:
     /*
      * Data transfer object for encoding first chunk in a message
@@ -94,9 +108,7 @@ public:
      * M_P and M_C are the maximum precision used to
      * encode components of position (M_P) and color (M_C) in bits.
     */
-    zmq::message_t encode(PointCloud<Vec<float>, Vec<float>>* point_cloud,
-                          const Vec8& grid_dimensions,
-                          const Vec<BitCount>& M_P, const Vec<BitCount>& M_C);
+    zmq::message_t encode(PointCloud<Vec<float>, Vec<float>>* point_cloud);
 
     /* Decodes given message into point_cloud. Returns success. */
     bool decode(zmq::message_t& msg, PointCloud<Vec<float>, Vec<float>>* point_cloud);

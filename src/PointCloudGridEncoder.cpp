@@ -5,7 +5,8 @@
 // Created by basti on 14.12.17.
 //
 PointCloudGridEncoder::PointCloudGridEncoder()
-    : pc_grid_()
+    : settings()
+    , pc_grid_()
     , header_()
 {
     pc_grid_ = new PointCloudGrid(Vec8(1,1,1));
@@ -18,12 +19,12 @@ PointCloudGridEncoder::~PointCloudGridEncoder()
     delete header_;
 }
 
-zmq::message_t PointCloudGridEncoder::encode(PointCloud<Vec<float>, Vec<float>>* point_cloud, const Vec8& grid_dimensions, const Vec<BitCount>& M_P, const Vec<BitCount>& M_C)
+zmq::message_t PointCloudGridEncoder::encode(PointCloud<Vec<float>, Vec<float>>* point_cloud)
 {
     // Set properties for new grid
-    pc_grid_->resize(grid_dimensions);
+    pc_grid_->resize(settings.grid_dimensions);
     pc_grid_->bounding_box = point_cloud->bounding_box;
-    buildPointCloudGrid(point_cloud, M_P, M_C);
+    buildPointCloudGrid(point_cloud, settings.positions_precision, settings.color_precision);
     return encodePointCloudGrid();
 };
 
