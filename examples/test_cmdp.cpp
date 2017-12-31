@@ -4,7 +4,6 @@
 #include <zmq.hpp>
 
 #include "../include/PointCloudGridEncoder.hpp"
-#include "../include/PointCloudBitGridEncoder.hpp"
 
 int main(int argc, char* argv[]){
     /*
@@ -41,13 +40,11 @@ int main(int argc, char* argv[]){
     //// ENCODING
 
     PointCloudGridEncoder encoder;
-    PointCloudBitGridEncoder bit_encoder;
     t.startWatch();
-    //zmq::message_t msg = encoder.encode<uint8_t, uint8_t>(&pc, Vec8(4,4,4));
     Vec8 GRID_DIMENSIONS(8,8,8);
     Vec<BitCount> POS_PRECISION(BIT_8,BIT_8,BIT_8);
     Vec<BitCount> CLR_PRECISION(BIT_5,BIT_6,BIT_5);
-    zmq::message_t msg = bit_encoder.encode(&pc, GRID_DIMENSIONS, POS_PRECISION, CLR_PRECISION);
+    zmq::message_t msg = encoder.encode(&pc, GRID_DIMENSIONS, POS_PRECISION, CLR_PRECISION);
 
     std::cout << "ENCODING DONE in " << t.stopWatch() << "ms.\n";
     auto size_bytes = static_cast<int>(msg.size());
@@ -62,8 +59,7 @@ int main(int argc, char* argv[]){
 
     PointCloud<Vec<float>, Vec<float>> pc2;
     t.startWatch();
-    //bool success = encoder.decode(msg, &pc2);
-    bool success = bit_encoder.decode(msg, &pc2);
+    bool success = encoder.decode(msg, &pc2);
     std::cout << "DECODING DONE in " << t.stopWatch() << "ms.\n";
     std::cout << "  > size " << pc2.size() << "\n";
     if(success)

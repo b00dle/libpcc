@@ -8,7 +8,7 @@ PointCloudGridEncoder::PointCloudGridEncoder()
     : pc_grid_()
     , header_()
 {
-    pc_grid_ = new VariantPointCloudGrid(Vec8(1,1,1));
+    pc_grid_ = new PointCloudGrid(Vec8(1,1,1));
     header_ = new GlobalHeader;
 }
 
@@ -22,6 +22,7 @@ bool PointCloudGridEncoder::decode(zmq::message_t &msg, PointCloud<Vec<float>, V
 {
     if(!decodePointCloudGrid(msg))
         return false;
+    std::cout << "DECODE GRID done\n";
     return extractPointCloudFromGrid(point_cloud);
 }
 
@@ -34,7 +35,6 @@ bool PointCloudGridEncoder::extractPointCloudFromGrid(PointCloud<Vec<float>, Vec
         num_grid_points += cell->size();
     point_cloud->clear();
     point_cloud->resize(num_grid_points);
-
     // calc cell range for local point mapping
     Vec<float> cell_range = pc_grid_->bounding_box.calcRange();
     Vec<float> pos_cell, clr, glob_cell_min;
@@ -43,10 +43,12 @@ bool PointCloudGridEncoder::extractPointCloudFromGrid(PointCloud<Vec<float>, Vec
     cell_range.z /= (float) pc_grid_->dimensions.z;
     BoundingBox bb_cell(Vec<float>(0.0f,0.0f,0.0f), cell_range);
     BoundingBox bb_clr(Vec<float>(0.0f,0.0f,0.0f), Vec<float>(1.0f,1.0f,1.0f));
-    VariantVec v_pos, v_clr;
+    Vec<uint64_t> v_pos, v_clr;
     unsigned cell_idx;
-    GridCell<VariantVec, VariantVec>* cell;
+    GridCell* cell;
     unsigned point_idx=0;
+    Vec<uint8_t> p_bits;
+    Vec<uint8_t> c_bits;
     for(unsigned x_idx=0; x_idx < pc_grid_->dimensions.x; ++x_idx) {
         for(unsigned y_idx=0; y_idx < pc_grid_->dimensions.y; ++y_idx) {
             for(unsigned z_idx=0; z_idx < pc_grid_->dimensions.z; ++z_idx) {
@@ -54,20 +56,19 @@ bool PointCloudGridEncoder::extractPointCloudFromGrid(PointCloud<Vec<float>, Vec
                     y_idx * pc_grid_->dimensions.x +
                     z_idx * pc_grid_->dimensions.x * pc_grid_->dimensions.y;
                 cell = pc_grid_->cells[cell_idx];
+                p_bits.x = cell->points.getNX();
+                p_bits.y = cell->points.getNY();
+                p_bits.z = cell->points.getNZ();
+                c_bits.x = cell->colors.getNX();
+                c_bits.y = cell->colors.getNY();
+                c_bits.z = cell->colors.getNZ();
                 glob_cell_min = Vec<float>(cell_range.x*x_idx, cell_range.y*y_idx, cell_range.z*z_idx);
                 glob_cell_min += pc_grid_->bounding_box.min;
-                bool ok=true;
-                for(unsigned i=0; i < pc_grid_->cells[cell_idx]->points.size(); ++i) {
+                for(unsigned i=0; i < cell->size(); ++i) {
                     v_pos = cell->points[i];
                     v_clr = cell->colors[i];
-                    if(v_pos.getType() == NONE || v_clr.getType() == NONE)
-                        continue;
-                    pos_cell = mapToFloat(v_pos, bb_cell, ok);
-                    if(!ok)
-                        continue;
-                    clr = mapToFloat(v_clr, bb_clr, ok);
-                    if(!ok)
-                        continue;
+                    pos_cell = mapVecToFloat(v_pos, bb_cell, p_bits);
+                    clr = mapVecToFloat(v_clr, bb_clr, c_bits);
                     point_cloud->points[point_idx] = pos_cell+glob_cell_min;
                     point_cloud->colors[point_idx] = clr;
                     ++point_idx;
@@ -81,20 +82,22 @@ bool PointCloudGridEncoder::extractPointCloudFromGrid(PointCloud<Vec<float>, Vec
 zmq::message_t PointCloudGridEncoder::encodePointCloudGrid() {
     std::vector<unsigned> black_list;
     std::vector<CellHeader*> cell_headers;
-    VariantVecType pos_type, clr_type;
     // initialize cell headers
     int total_elements = 0;
     for(unsigned cell_idx = 0; cell_idx < pc_grid_->cells.size(); ++cell_idx) {
-        pos_type = pc_grid_->getPointType(cell_idx);
-        clr_type = pc_grid_->getColorType(cell_idx);
-        if(pos_type == NONE || clr_type == NONE) {
+        if(pc_grid_->cells[cell_idx]->size() == 0) {
             black_list.push_back(cell_idx);
             continue;
         }
         auto c_header = new CellHeader;
         c_header->cell_idx = cell_idx;
-        c_header->point_encoding = pos_type;
-        c_header->color_encoding = clr_type;
+        // TODO extend header with precise encoding
+        c_header->point_encoding_x = (*pc_grid_)[cell_idx]->points.getNX();
+        c_header->point_encoding_y = (*pc_grid_)[cell_idx]->points.getNY();
+        c_header->point_encoding_z = (*pc_grid_)[cell_idx]->points.getNZ();
+        c_header->color_encoding_x = (*pc_grid_)[cell_idx]->colors.getNX();
+        c_header->color_encoding_y = (*pc_grid_)[cell_idx]->colors.getNY();
+        c_header->color_encoding_z = (*pc_grid_)[cell_idx]->colors.getNZ();
         c_header->num_elements = pc_grid_->cells[cell_idx]->size();
         cell_headers.push_back(c_header);
         total_elements += c_header->num_elements;
@@ -115,7 +118,7 @@ zmq::message_t PointCloudGridEncoder::encodePointCloudGrid() {
 
     for(CellHeader* c_header: cell_headers) {
         offset = encodeCellHeader(message, c_header, offset);
-        offset = encodeVariantCell(message, pc_grid_->cells[c_header->cell_idx], offset);
+        offset = encodeCell(message, pc_grid_->cells[c_header->cell_idx], offset);
     }
 
     // Cleanup
@@ -156,7 +159,7 @@ bool PointCloudGridEncoder::decodePointCloudGrid(zmq::message_t& msg)
         if(offset == old_offset)
             return false;
         // extract cell using cell_header
-        offset = decodeVariantCell(msg, c_header, offset);
+        offset = decodeCell(msg, c_header, offset);
     }
     delete c_header;
 
@@ -270,10 +273,14 @@ size_t PointCloudGridEncoder::encodeCellHeader(zmq::message_t& msg, CellHeader* 
     memcpy((unsigned char*) msg.data() + offset, (unsigned char*) num_elmts , bytes_num_elmts);
     offset += bytes_num_elmts;
 
-    auto encoding = new VariantVecType[2];
-    size_t bytes_enc(2*sizeof(VariantVecType));
-    encoding[0] = c_header->point_encoding;
-    encoding[1] = c_header->color_encoding;
+    auto encoding = new BitCount[6];
+    size_t bytes_enc(6*sizeof(BitCount));
+    encoding[0] = c_header->point_encoding_x;
+    encoding[1] = c_header->point_encoding_y;
+    encoding[2] = c_header->point_encoding_z;
+    encoding[3] = c_header->color_encoding_x;
+    encoding[4] = c_header->color_encoding_y;
+    encoding[5] = c_header->color_encoding_z;
     memcpy((unsigned char*) msg.data() + offset, (unsigned char*) encoding, bytes_enc);
     offset += bytes_enc;
 
@@ -291,11 +298,15 @@ size_t PointCloudGridEncoder::decodeCellHeader(zmq::message_t& msg, CellHeader* 
     c_header->num_elements = num_elmts[0];
     offset += bytes_num_elmts;
 
-    auto encoding = new VariantVecType[2];
-    size_t bytes_enc(2* sizeof(VariantVecType));
+    auto encoding = new BitCount[6];
+    size_t bytes_enc(6*sizeof(BitCount));
     memcpy((unsigned char*) encoding, (unsigned char*) msg.data() + offset, bytes_enc);
-    c_header->point_encoding = encoding[0];
-    c_header->color_encoding = encoding[1];
+    c_header->point_encoding_x = encoding[0];
+    c_header->point_encoding_y = encoding[1];
+    c_header->point_encoding_z = encoding[2];
+    c_header->color_encoding_x = encoding[3];
+    c_header->color_encoding_y = encoding[4];
+    c_header->color_encoding_z = encoding[5];
     offset += bytes_enc;
 
     // cleanup
@@ -304,256 +315,70 @@ size_t PointCloudGridEncoder::decodeCellHeader(zmq::message_t& msg, CellHeader* 
     return offset;
 }
 
-size_t PointCloudGridEncoder::encodeVariantCell(zmq::message_t& msg, GridCell<VariantVec,VariantVec>* cell, size_t offset)
+size_t PointCloudGridEncoder::encodeCell(zmq::message_t &msg, GridCell* cell, size_t offset)
 {
     if(cell->size() == 0)
         return offset;
 
-    VariantVecType p_type = cell->points[0].getType();
-    VariantVecType c_type = cell->colors[0].getType();
+    // pack positions
+    unsigned char* p_packed = cell->points.pack();
+    size_t bytes_p(cell->points.getByteSize());
+    memcpy((unsigned char*) msg.data() + offset, p_packed, bytes_p);
+    offset += bytes_p;
 
-    if(p_type == NONE || c_type == NONE)
-        return offset;
+    // pack colors
+    unsigned char* c_packed = cell->colors.pack();
+    size_t bytes_c(cell->colors.getByteSize());
+    memcpy((unsigned char*) msg.data() + offset, c_packed, bytes_c);
+    offset += bytes_c;
 
-    size_t old_offset = offset;
-
-    // encode points
-    if(p_type == VEC_FLOAT) {
-        auto p_arr = new float[cell->size()*3];
-        size_t bytes_p_arr(3*cell->size()*sizeof(float));
-        bool ok = true;
-        Vec<float> v;
-        for(unsigned i=0; i < cell->size(); ++i) {
-            v = cell->points[i].toVecFloat(ok);
-            if(!ok) {
-                std::cerr << "Failure: couldn't cast vector from variant." << std::endl;
-                continue;
-            }
-            p_arr[i*3] = v.x;
-            p_arr[i*3+1] = v.y;
-            p_arr[i*3+2] = v.z;
-        }
-        memcpy((unsigned char*) msg.data() + offset, (unsigned char*) p_arr, bytes_p_arr);
-        offset += bytes_p_arr;
-        delete [] p_arr;
-    }
-    else if(p_type == VEC_UINT16) {
-        auto p_arr = new uint16_t[cell->size()*3];
-        size_t bytes_p_arr(cell->size()*3*sizeof(uint16_t));
-        bool ok = true;
-        Vec<uint16_t> v;
-        for(unsigned i=0; i < cell->size(); ++i) {
-            v = cell->points[i].toVecUInt16(ok);
-            if(!ok) {
-                std::cerr << "Failure: couldn't cast vector from variant." << std::endl;
-                continue;
-            }
-            p_arr[i*3] = v.x;
-            p_arr[i*3+1] = v.y;
-            p_arr[i*3+2] = v.z;
-        }
-        memcpy((unsigned char*) msg.data() + offset, (unsigned char*) p_arr, bytes_p_arr);
-        offset += bytes_p_arr;
-        delete [] p_arr;
-    }
-    else if(p_type == VEC_UINT8) {
-        auto p_arr = new uint8_t[cell->size()*3];
-        size_t bytes_p_arr(cell->size()*3*sizeof(uint8_t));
-        bool ok = true;
-        Vec<uint8_t> v;
-        for(unsigned i=0; i < cell->size(); ++i) {
-            v = cell->points[i].toVecUInt8(ok);
-            if(!ok) {
-                std::cerr << "Failure: couldn't cast vector from variant." << std::endl;
-                continue;
-            }
-            p_arr[i*3] = v.x;
-            p_arr[i*3+1] = v.y;
-            p_arr[i*3+2] = v.z;
-        }
-        memcpy((unsigned char*) msg.data() + offset, p_arr, bytes_p_arr);
-        offset += bytes_p_arr;
-        delete [] p_arr;
-    }
-
-    old_offset = offset;
-
-    // encode points
-    if(c_type == VEC_FLOAT) {
-        auto c_arr = new float[cell->size()*3];
-        size_t bytes_c_arr(cell->size()*3*sizeof(float));
-        bool ok = true;
-        Vec<float> v;
-        for(unsigned i=0; i < cell->size(); ++i) {
-            v = cell->colors[i].toVecFloat(ok);
-            if(!ok) {
-                std::cerr << "Failure: couldn't cast vector from variant." << std::endl;
-                continue;
-            }
-            c_arr[i*3] = v.x;
-            c_arr[i*3+1] = v.y;
-            c_arr[i*3+2] = v.z;
-        }
-        memcpy((unsigned char*) msg.data() + offset, (unsigned char*) c_arr, bytes_c_arr);
-        offset += bytes_c_arr;
-        delete [] c_arr;
-    }
-    else if(c_type == VEC_UINT16) {
-        auto c_arr = new uint16_t[cell->size()*3];
-        size_t bytes_c_arr(cell->size()*3*sizeof(uint16_t));
-        bool ok = true;
-        Vec<uint16_t> v;
-        for(unsigned i=0; i < cell->size(); ++i) {
-            v = cell->colors[i].toVecUInt16(ok);
-            if(!ok) {
-                std::cerr << "Failure: couldn't cast vector from variant." << std::endl;
-                continue;
-            }
-            c_arr[i*3] = v.x;
-            c_arr[i*3+1] = v.y;
-            c_arr[i*3+2] = v.z;
-        }
-        memcpy((unsigned char*) msg.data() + offset, (unsigned char*) c_arr, bytes_c_arr);
-        offset += bytes_c_arr;
-        delete [] c_arr;
-    }
-    else if(c_type == VEC_UINT8) {
-        auto c_arr = new uint8_t[cell->size()*3];
-        size_t bytes_c_arr(cell->size()*3*sizeof(uint8_t));
-        bool ok = true;
-        Vec<uint8_t> v;
-        for(unsigned i=0; i < cell->size(); ++i) {
-            v = cell->colors[i].toVecUInt8(ok);
-            if(!ok) {
-                std::cerr << "Failure: couldn't cast vector from variant." << std::endl;
-                continue;
-            }
-            c_arr[i*3] = v.x;
-            c_arr[i*3+1] = v.y;
-            c_arr[i*3+2] = v.z;
-        }
-        memcpy((unsigned char*) msg.data() + offset, c_arr, bytes_c_arr);
-        offset += bytes_c_arr;
-        delete [] c_arr;
-    }
+    delete [] p_packed;
+    delete [] c_packed;
 
     return offset;
 }
 
-size_t PointCloudGridEncoder::decodeVariantCell(zmq::message_t& msg, CellHeader* c_header, size_t offset)
+size_t PointCloudGridEncoder::decodeCell(zmq::message_t &msg, CellHeader *c_header, size_t offset)
 {
     if(c_header->num_elements == 0)
         return offset;
 
-    GridCell<VariantVec, VariantVec>* cell = pc_grid_->cells[c_header->cell_idx];
-    cell->clear();
-    cell->resize(c_header->num_elements);
+    // TODO precise encoding
+    GridCell* cell = pc_grid_->cells[c_header->cell_idx];
 
-    VariantVecType p_type = c_header->point_encoding;
-    VariantVecType c_type = c_header->color_encoding;
+    // set BitCount and element count for position data
+    cell->initPoints(
+        c_header->point_encoding_x,
+        c_header->point_encoding_y,
+        c_header->point_encoding_z
+    );
+    cell->points.resize(c_header->num_elements);
 
-    if(p_type == NONE || c_type == NONE)
-        return offset;
+    // set BitCount and element count for color data
+    cell->initColors(
+            c_header->color_encoding_x,
+            c_header->color_encoding_y,
+            c_header->color_encoding_z
+    );
+    cell->colors.resize(c_header->num_elements);
 
-    // encode points
-    if(p_type == VEC_FLOAT) {
-        auto p_arr = new float[c_header->num_elements*3];
-        size_t bytes_p_arr(c_header->num_elements*3*sizeof(float));
-        memcpy((unsigned char*) p_arr, (unsigned char*) msg.data() + offset, bytes_p_arr);
-        offset += bytes_p_arr;
+    // extract position data
+    size_t bytes_p(cell->points.getByteSize());
+    auto p_arr = new unsigned char[bytes_p];
+    memcpy(p_arr, (unsigned char*) msg.data() + offset, bytes_p);
+    offset += bytes_p;
+    cell->points.unpack(p_arr, c_header->num_elements);
 
-        Vec<float> v;
-        for(unsigned i=0; i < c_header->num_elements; ++i) {
-            v.x = p_arr[i*3];
-            v.y = p_arr[i*3+1];
-            v.z = p_arr[i*3+2];
-            cell->points[i].set(v);
-        }
+    // extract color data
+    size_t bytes_c(cell->colors.getByteSize());
+    auto c_arr = new unsigned char[bytes_c];
+    memcpy(c_arr, (unsigned char*) msg.data() + offset, bytes_c);
+    offset += bytes_c;
+    cell->colors.unpack(c_arr, c_header->num_elements);
 
-        delete [] p_arr;
-    }
-    else if(p_type == VEC_UINT16) {
-        auto p_arr = new uint16_t[c_header->num_elements*3];
-        size_t bytes_p_arr(c_header->num_elements*3*sizeof(uint16_t));
-        memcpy((unsigned char*) p_arr, (unsigned char*) msg.data() + offset, bytes_p_arr);
-        offset += bytes_p_arr;
-
-        Vec<uint16_t> v;
-        for(unsigned i=0; i < c_header->num_elements; ++i) {
-            v.x = p_arr[i*3];
-            v.y = p_arr[i*3+1];
-            v.z = p_arr[i*3+2];
-            cell->points[i].set(v);
-        }
-
-        delete [] p_arr;
-    }
-    else if(p_type == VEC_UINT8) {
-        auto p_arr = new uint8_t[c_header->num_elements*3];
-        size_t bytes_p_arr(c_header->num_elements*3*sizeof(uint8_t));
-        memcpy(p_arr, (unsigned char*) msg.data() + offset, bytes_p_arr);
-        offset += bytes_p_arr;
-
-        Vec<uint8_t> v;
-        for(unsigned i=0; i < c_header->num_elements; ++i) {
-            v.x = p_arr[i*3];
-            v.y = p_arr[i*3+1];
-            v.z = p_arr[i*3+2];
-            cell->points[i].set(v);
-        }
-
-        delete [] p_arr;
-    }
-
-    // encode points
-    if(c_type == VEC_FLOAT) {
-        auto c_arr = new float[c_header->num_elements*3];
-        size_t bytes_c_arr(c_header->num_elements*3*sizeof(float));
-        memcpy((unsigned char*) c_arr, (unsigned char*) msg.data() + offset, bytes_c_arr);
-        offset += bytes_c_arr;
-
-        Vec<float> v;
-        for(unsigned i=0; i < c_header->num_elements; ++i) {
-            v.x = c_arr[i*3];
-            v.y = c_arr[i*3+1];
-            v.z = c_arr[i*3+2];
-            cell->colors[i].set(v);
-        }
-
-        delete [] c_arr;
-    }
-    else if(c_type == VEC_UINT16) {
-        auto c_arr = new uint16_t[c_header->num_elements*3];
-        size_t bytes_c_arr(c_header->num_elements*3*sizeof(uint16_t));
-        memcpy((unsigned char*) c_arr, (unsigned char*) msg.data() + offset, bytes_c_arr);
-        offset += bytes_c_arr;
-
-        Vec<uint16_t> v;
-        for(unsigned i=0; i < c_header->num_elements; ++i) {
-            v.x = c_arr[i*3];
-            v.y = c_arr[i*3+1];
-            v.z = c_arr[i*3+2];
-            cell->colors[i].set(v);
-        }
-
-        delete [] c_arr;
-    }
-    else if(c_type == VEC_UINT8) {
-        auto c_arr = new uint8_t[c_header->num_elements*3];
-        size_t bytes_c_arr(c_header->num_elements*3*sizeof(uint8_t));
-        memcpy(c_arr, (unsigned char*) msg.data() + offset, bytes_c_arr);
-        offset += bytes_c_arr;
-
-        Vec<uint8_t> v;
-        for(unsigned i=0; i < c_header->num_elements; ++i) {
-            v.x = c_arr[i*3];
-            v.y = c_arr[i*3+1];
-            v.z = c_arr[i*3+2];
-            cell->colors[i].set(v);
-        }
-
-        delete [] c_arr;
-    }
+    // cleanup
+    delete [] p_arr;
+    delete [] c_arr;
 
     return offset;
 }
@@ -607,15 +432,21 @@ size_t PointCloudGridEncoder::calcMessageSize(const std::vector<CellHeader *> & 
     for(auto c_header: cell_headers) {
         num_elements += c_header->num_elements;
         // size of elements for one cell
-        message_size += c_header->num_elements * (
-            VariantVec::getByteSize(c_header->point_encoding) +
-            VariantVec::getByteSize(c_header->color_encoding)
+        message_size += BitVecArray::getByteSize(
+            c_header->num_elements,
+            c_header->point_encoding_x,
+            c_header->point_encoding_y,
+            c_header->point_encoding_z
+        );
+        message_size += BitVecArray::getByteSize(
+                c_header->num_elements,
+                c_header->color_encoding_x,
+                c_header->color_encoding_y,
+                c_header->color_encoding_z
         );
     }
     std::cout << "CELLS\n";
     std::cout << " > ELEMENT COUNT " << num_elements << std::endl;
-    std::cout << " > SINGLE POINT SIZE (bytes) " << VariantVec::getByteSize(cell_headers[0]->point_encoding) << std::endl;
-    std::cout << " > SINGLE COLOR SIZE (bytes) " << VariantVec::getByteSize(cell_headers[0]->color_encoding) << std::endl;
     return message_size;
 }
 

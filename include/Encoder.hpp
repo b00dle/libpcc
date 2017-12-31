@@ -3,7 +3,6 @@
 
 #include <cmath>
 #include "PointCloud.hpp"
-#include "VariantVec.hpp"
 #include "../include/BitVec.hpp"
 
 class Encoder {
@@ -70,21 +69,6 @@ public:
         res.z = mapFromBit((uint32_t) from.z, bb.min.z, bb.max.z, bits.z);
         return res;
     };
-
-    static const Vec<float> mapToFloat(const VariantVec& from, BoundingBox const& bb, bool& ok) {
-        // TODO: Handle float type
-        switch(from.getType()) {
-            case VEC_UINT8:
-                return mapVecToFloat(from.toVecUInt8(ok), bb);
-            case VEC_UINT16:
-                return mapVecToFloat(from.toVecUInt16(ok), bb);
-            default:
-                ok=false;
-                return Vec<float>();
-        }
-    }
-
-private:
 };
 
 
