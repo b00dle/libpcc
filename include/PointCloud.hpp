@@ -1,5 +1,6 @@
-#ifndef POINT_CLOUD_HPP
-#define POINT_CLOUD_HPP
+#ifndef LIBPCC_POINT_CLOUD_HPP
+#define LIBPCC_POINT_CLOUD_HPP
+
 
 #include <vector>
 #include <cstdint>
@@ -59,4 +60,4 @@ struct PointCloud {
     std::vector<C> colors;
 };
 
-#endif // #ifndef  POINT_CLOUD_HPP
+#endif // #ifndef  LIBPCC_POINT_CLOUD_HPP

@@ -1,5 +1,5 @@
-#ifndef MEASUREMENT_HPP
-#define MEASUREMENT_HPP
+#ifndef LIBPCC_MEASUREMENT_HPP
+#define LIBPCC_MEASUREMENT_HPP
 
 #include <math.h>
 #include <iostream>
@@ -34,4 +34,4 @@ time_point<system_clock> m_start_time;
 };
 
 
-#endif // #ifndef  MEASUREMENT_HPP
+#endif // #ifndef  LIBPCC_MEASUREMENT_HPP

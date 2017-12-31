@@ -1,15 +1,13 @@
-//
-// Created by basti on 31.12.17.
-//
-
 #ifndef LIBPCC_BITVALUE_HPP
 #define LIBPCC_BITVALUE_HPP
 
 #include <cstdlib>
 #import <bitset>
 
-/* Used to denote amount of bits in a BitValue.
- * Range [1,32] */
+/*
+ * Used to denote component precision (amount of bits) in a BitValue.
+ * Range [1,32]
+*/
 enum BitCount {
     BIT_1 = 1,
     BIT_2 = 2,
@@ -57,14 +55,15 @@ struct AbstractBitValue {
 
     virtual void set(uint64_t) = 0;
 
-    virtual bool getBit(size_t pos) = 0;
+    virtual bool getBit(size_t pos) const = 0;
 
     virtual void setBit(size_t pos, bool val) = 0;
 };
 
 /*
- * Template type BitValue.
- * Wraps a std::bitset of size N.
+ * Template type Wrapping a std::bitset of size N.
+ * Offers convenience functions for accessing and setting
+ * data independent from template arguments.
 */
 template <BitCount N>
 struct BitValue : AbstractBitValue {
@@ -87,7 +86,7 @@ struct BitValue : AbstractBitValue {
         data = std::bitset<N>(v);
     }
 
-    bool getBit(size_t pos) override
+    bool getBit(size_t pos) const override
     {
         return data[pos];
     }
@@ -104,7 +103,7 @@ struct BitValue : AbstractBitValue {
  * Helper function to create child class instance
  * BitValue referenced by AbstractBitValue* v
  * with respect to given BitCount.
- * val can be supplied as an initialization value for
+ * val can be supplied as an initial value for
  * created BitValue.
 */
 static void initBitValue(AbstractBitValue*& v, BitCount N, uint64_t val=0) {

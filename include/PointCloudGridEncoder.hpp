@@ -1,7 +1,3 @@
-//
-// Created by basti on 14.12.17.
-//
-
 #ifndef LIBPCC_POINT_CLOUD_GRID_ENCODER_HPP
 #define LIBPCC_POINT_CLOUD_GRID_ENCODER_HPP
 
@@ -36,6 +32,9 @@ public:
             , positions_precision(BIT_8, BIT_8, BIT_8)
             , color_precision(BIT_8, BIT_8, BIT_8)
         {}
+
+        EncodingSettings(const EncodingSettings&) = default;
+
         Vec8 grid_dimensions;
         Vec<BitCount> positions_precision;
         Vec<BitCount> color_precision;
@@ -106,7 +105,7 @@ private:
     };
 
 public:
-    PointCloudGridEncoder();
+    PointCloudGridEncoder(const EncodingSettings& s = EncodingSettings());
     virtual ~PointCloudGridEncoder();
 
     /*

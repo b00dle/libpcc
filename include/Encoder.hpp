@@ -1,5 +1,5 @@
-#ifndef ENCODER_HPP
-#define ENCODER_HPP
+#ifndef LIBPCC_ENCODER_HPP
+#define LIBPCC_ENCODER_HPP
 
 #include <cmath>
 #include "PointCloud.hpp"
@@ -41,5 +41,5 @@ public:
 };
 
 
-#endif // #ifndef  ENCODER_HPP
+#endif // #ifndef  LIBPCC_ENCODER_HPP
 

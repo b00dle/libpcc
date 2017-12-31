@@ -1,9 +1,5 @@
-//
-// Created by basti on 29.12.17.
-//
-
-#ifndef LIBPCC_BIT_VEC_POINT_CLOUD_GRID_HPP
-#define LIBPCC_BIT_VEC_POINT_CLOUD_GRID_HPP
+#ifndef LIBPCC_POINT_CLOUD_GRID_HPP
+#define LIBPCC_POINT_CLOUD_GRID_HPP
 
 #include "../include/BitVecArray.hpp"
 #include "../include/PointCloud.hpp"
@@ -101,4 +97,4 @@ private:
     }
 };
 
-#endif //LIBPCC_BIT_VEC_POINT_CLOUD_GRID_HPP
+#endif //LIBPCC_POINT_CLOUD_GRID_HPP

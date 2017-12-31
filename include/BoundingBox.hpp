@@ -1,19 +1,17 @@
-//
-// Created by basti on 31.12.17.
-//
+#ifndef LIBPCC_BOUNDING_BOX_HPP
+#define LIBPCC_BOUNDING_BOX_HPP
 
-#ifndef LIBPCC_BOUNDINGBOX_HPP
-#define LIBPCC_BOUNDINGBOX_HPP
+#include "../include/Vec.hpp"
 
 struct BoundingBox {
     explicit BoundingBox(float x_min_t=.0f, float x_max_t=.0f, float y_min_t=.0f, float y_max_t=.0f, float z_min_t=.0f, float z_max_t=.0f)
-            : min(x_min_t, y_min_t, z_min_t)
-            , max(x_max_t, y_max_t, z_max_t)
+        : min(x_min_t, y_min_t, z_min_t)
+        , max(x_max_t, y_max_t, z_max_t)
     {}
 
     explicit BoundingBox(const Vec<float>& min_t, const Vec<float>& max_t)
-            : min(min_t)
-            , max(max_t)
+        : min(min_t)
+        , max(max_t)
     {}
 
     BoundingBox(BoundingBox const& bb) = default;
@@ -35,4 +33,4 @@ struct BoundingBox {
     Vec<float> max;
 };
 
-#endif //LIBPCC_BOUNDINGBOX_HPP
+#endif //LIBPCC_BOUNDING_BOX_HPP

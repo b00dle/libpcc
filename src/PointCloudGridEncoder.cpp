@@ -1,11 +1,10 @@
 #include "../include/PointCloudGridEncoder.hpp"
+
 #include <set>
 
-//
-// Created by basti on 14.12.17.
-//
-PointCloudGridEncoder::PointCloudGridEncoder()
-    : settings()
+PointCloudGridEncoder::PointCloudGridEncoder(const EncodingSettings& s)
+    : Encoder()
+    , settings(s)
     , pc_grid_()
     , header_()
 {

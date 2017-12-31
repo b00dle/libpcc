@@ -1,7 +1,3 @@
-//
-// Created by basti on 31.12.17.
-//
-
 #ifndef LIBPCC_VEC_HPP
 #define LIBPCC_VEC_HPP
 
