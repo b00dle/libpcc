@@ -21,6 +21,7 @@ int main(int argc, char* argv[]){
     std::string endpoint("tcp://" + socket_name);
     socket.bind(endpoint.c_str());
     */
+
     Measure t;
 
     PointCloud<Vec<float>, Vec<float>> pc(BoundingBox(Vec<float>(-1.01f,-1.01f,-1.01f), Vec<float>(1.01f,1.01f,1.01f)));
@@ -39,9 +40,13 @@ int main(int argc, char* argv[]){
     //// ENCODING
 
     PointCloudGridEncoder encoder;
+    encoder.settings.grid_dimensions = Vec8(4,4,4);
+    encoder.settings.point_precision = Vec<BitCount>(BIT_8,BIT_8,BIT_8);
+    encoder.settings.color_precision = Vec<BitCount>(BIT_8,BIT_8,BIT_8);
+
     t.startWatch();
-    zmq::message_t msg = encoder.encode<uint8_t, uint16_t>(&pc, Vec8(8,8,8));
-    
+    zmq::message_t msg = encoder.encode(&pc);
+
     std::cout << "ENCODING DONE in " << t.stopWatch() << "ms.\n";
     auto size_bytes = static_cast<int>(msg.size());
     int size_bit = size_bytes * 8;
@@ -57,12 +62,11 @@ int main(int argc, char* argv[]){
     t.startWatch();
     bool success = encoder.decode(msg, &pc2);
     std::cout << "DECODING DONE in " << t.stopWatch() << "ms.\n";
-
+    std::cout << "  > size " << pc2.size() << "\n";
     if(success)
         std::cout << "  > success: YES\n";
     else
         std::cout << "  > success: NO\n";
-
 
     t.startWatch();
     std::cout << "  > MSE " << t.meanSquaredErrorPC(pc, pc2) << std::endl;

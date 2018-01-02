@@ -1,24 +1,31 @@
-#ifndef POINT_CLOUD_GRID_HPP
-#define POINT_CLOUD_GRID_HPP
+#ifndef LIBPCC_POINT_CLOUD_GRID_HPP
+#define LIBPCC_POINT_CLOUD_GRID_HPP
 
-#include <vector>
+#include "../include/BitVecArray.hpp"
 #include "../include/PointCloud.hpp"
-#include "VariantVec.hpp"
 
-template <typename P, typename C>
 struct GridCell {
-    GridCell()
-        : points()
-        , colors()
-    {}
+    GridCell() = default;
 
-    virtual void addVoxel(P const& pos, C const& clr)
+    ~GridCell() = default;
+
+    void initPoints(BitCount NX, BitCount NY, BitCount NZ)
     {
-        points.push_back(pos);
-        colors.push_back(clr);
+        points.init(NX, NY, NZ);
     }
 
-    unsigned size() const
+    void initColors(BitCount NX, BitCount NY, BitCount NZ)
+    {
+        colors.init(NX, NY, NZ);
+    }
+
+    void addVoxel(const Vec<uint64_t>& p, const Vec<uint64_t>& c)
+    {
+        points.push_back(p);
+        colors.push_back(c);
+    }
+
+    unsigned size()
     {
         return points.size();
     }
@@ -35,11 +42,10 @@ struct GridCell {
         colors.clear();
     }
 
-    std::vector<P> points;
-    std::vector<C> colors;
+    BitVecArray points;
+    BitVecArray colors;
 };
 
-template <typename P, typename C>
 struct PointCloudGrid {
     explicit PointCloudGrid(Vec8 const& t_dimensions=Vec8(4,4,4), const BoundingBox& t_bb=BoundingBox())
         : dimensions(t_dimensions)
@@ -49,15 +55,17 @@ struct PointCloudGrid {
         initCells();
     }
 
-    virtual ~PointCloudGrid() {
-        while(cells.size() > 0) {
-            delete cells.back();
-            cells.pop_back();
-        }
+    ~PointCloudGrid() {
+        deleteCells();
     }
 
     void clear() {
-        while(cells.size() > 0) {
+        for(auto c : cells)
+            c->clear();
+    }
+
+    void deleteCells() {
+        while(!cells.empty()) {
             cells.back()->clear();
             delete cells.back();
             cells.pop_back();
@@ -67,58 +75,26 @@ struct PointCloudGrid {
     void resize(Vec8 const& t_dimensions) {
         if(t_dimensions == dimensions)
             return;
-        clear();
+        deleteCells();
         dimensions = t_dimensions;
         initCells();
     }
 
+    GridCell* operator[](unsigned cell_idx) {
+        return cells[cell_idx];
+    }
+
     Vec8 dimensions;
     BoundingBox bounding_box;
-    std::vector<GridCell<P,C>*> cells;
+    std::vector<GridCell*> cells;
 
 private:
     void initCells() {
         unsigned idx_count = dimensions.x * dimensions.y * dimensions.z;
         for(unsigned i=0; i < idx_count; ++i) {
-            cells.push_back(new GridCell<P, C>());
+            cells.push_back(new GridCell);
         }
     }
 };
 
-struct VariantPointCloudGrid : PointCloudGrid<VariantVec, VariantVec> {
-    explicit VariantPointCloudGrid(Vec8 const& t_dimensions=Vec8(4,4,4), const BoundingBox& t_bb=BoundingBox())
-        : PointCloudGrid(t_dimensions, t_bb)
-    {}
-
-    /*virtual*/ ~VariantPointCloudGrid() = default;
-
-    /*virtual*/ void addVoxel(unsigned cell_idx, const VariantVec& pos, const VariantVec& clr) {
-        if(cell_idx >= cells.size())
-            return;
-        if(cells[cell_idx]->size() == 0) {
-            cells[cell_idx]->addVoxel(pos, clr);
-        }
-        else if(cells[cell_idx]->points[0].getType() == pos.getType() &&
-                cells[cell_idx]->colors[0].getType() == clr.getType()) {
-            cells[cell_idx]->addVoxel(pos, clr);
-        }
-    }
-
-    VariantVecType getPointType(unsigned cell_idx) const {
-        if(cell_idx >= cells.size())
-            return NONE;
-        if(cells[cell_idx]->points.size() == 0)
-            return NONE;
-        return cells[cell_idx]->points[0].getType();
-    }
-
-    VariantVecType getColorType(unsigned cell_idx) const {
-        if(cell_idx >= cells.size())
-            return NONE;
-        if(cells[cell_idx]->colors.size() == 0)
-            return NONE;
-        return cells[cell_idx]->colors[0].getType();
-    }
-};
-
-#endif //POINT_CLOUD_GRID_HPP
+#endif //LIBPCC_POINT_CLOUD_GRID_HPP
