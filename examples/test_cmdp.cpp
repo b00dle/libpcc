@@ -4,6 +4,7 @@
 #include <zmq.hpp>
 
 #include "../include/PointCloudGridEncoder.hpp"
+#include "../include/BinaryFile.hpp"
 
 int main(int argc, char* argv[]){
     /*
@@ -56,11 +57,30 @@ int main(int argc, char* argv[]){
               << "    > bytes " << size_bytes << "\n"
               << "    > mbit " << mbit << "\n";
 
+    //// TESTING FILE READ/WRITE
+
+    BinaryFile f(msg);
+    if(f.write("./test_pc_grid.txt")) {
+        std::cout << "WRITE TO FILE done.\n";
+        if(f.read("./test_pc_grid.txt")) {
+            f.copy((char*) msg.data());
+            std::cout << "READ FROM FILE done.\n";
+        }
+        else {
+            std::cout << "READ FROM FILE failed.\n";
+        }
+    }
+    else {
+        std::cout << "WRITE TO FILE failed.\n";
+    }
+
     //// DECODING
 
     PointCloud<Vec<float>, Vec<float>> pc2;
     t.startWatch();
-    bool success = encoder.decode(msg, &pc2);
+    zmq::message_t msg2 = f.get();
+    //bool success = encoder.decode(msg, &pc2);
+    bool success = encoder.decode(msg2, &pc2);
     std::cout << "DECODING DONE in " << t.stopWatch() << "ms.\n";
     std::cout << "  > size " << pc2.size() << "\n";
     if(success)
