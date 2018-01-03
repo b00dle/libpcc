@@ -182,6 +182,9 @@ bool PointCloudGridEncoder::extractPointCloudFromGrid(PointCloud<Vec<float>, Vec
 }
 
 zmq::message_t PointCloudGridEncoder::encodePointCloudGrid() {
+    Measure m;
+    m.startWatch();
+
     std::vector<unsigned> black_list;
     std::vector<CellHeader*> cell_headers;
     // initialize cell headers
@@ -218,13 +221,39 @@ zmq::message_t PointCloudGridEncoder::encodePointCloudGrid() {
     size_t offset = encodeGlobalHeader(message);
     offset = encodeBlackList(message, black_list, offset);
 
-    // TODO:
-    // - calc message offset prior to parallelization
-    // - write to massage using structure memcpy with prev calc offsets
-    // - parallelize for loop below
-    for(CellHeader* c_header: cell_headers) {
-        offset = encodeCellHeader(message, c_header, offset);
-        offset = encodeCell(message, pc_grid_->cells[c_header->cell_idx], offset);
+    time_t pre_cells = m.stopWatch();
+
+    // Calculate offsets prior to message encoding
+    // to be able to parallelize message creation
+    std::vector<size_t> cell_offsets(cell_headers.size(), 0);
+    for(unsigned i = 0; i < cell_headers.size(); ++i) {
+        if(i == 0) {
+            cell_offsets[i] += offset;
+        }
+        else {
+            cell_offsets[i] = cell_offsets[i-1];
+            cell_offsets[i] += CellHeader::getByteSize();
+            cell_offsets[i] += BitVecArray::getByteSize(
+                cell_headers[i-1]->num_elements,
+                cell_headers[i-1]->point_encoding_x,
+                cell_headers[i-1]->point_encoding_y,
+                cell_headers[i-1]->point_encoding_z
+            );
+            cell_offsets[i] += BitVecArray::getByteSize(
+                    cell_headers[i-1]->num_elements,
+                    cell_headers[i-1]->color_encoding_x,
+                    cell_headers[i-1]->color_encoding_y,
+                    cell_headers[i-1]->color_encoding_z
+            );
+        }
+    }
+
+    // generate message content for cells in parallel
+    #pragma omp parallel for
+    for(unsigned i = 0; i < cell_headers.size(); ++i) {
+        size_t temp_offset(cell_offsets[i]);
+        temp_offset = encodeCellHeader(message, cell_headers[i], temp_offset);
+        encodeCell(message, pc_grid_->cells[cell_headers[i]->cell_idx], temp_offset);
     }
 
     // Cleanup
@@ -232,6 +261,13 @@ zmq::message_t PointCloudGridEncoder::encodePointCloudGrid() {
         delete cell_headers.back();
         cell_headers.pop_back();
     }
+
+    time_t post_cells = m.stopWatch();
+
+    std::cout << "ENCODING done.\n";
+    std::cout << "  > took " << post_cells << "ms.\n";
+    std::cout << "    > pre-encode cells " << pre_cells << "ms.\n";
+    std::cout << "    > encode cells " << post_cells-pre_cells << "ms.\n";
 
     return message;
 }
