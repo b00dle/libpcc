@@ -1,4 +1,4 @@
-#include "BinaryFile.hpp"
+#include "../include/BinaryFile.hpp"
 
 #include <fstream>
 
