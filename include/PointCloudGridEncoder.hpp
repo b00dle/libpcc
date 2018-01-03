@@ -43,6 +43,9 @@ public:
     EncodingSettings settings;
 
 private:
+    template<typename C>
+    using GridVec = std::vector<std::vector<Vec<C>>>;
+
     /*
      * Data transfer object for encoding first chunk in a message
      * which contains a PointCloudGrid.

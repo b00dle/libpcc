@@ -34,39 +34,68 @@ bool PointCloudGridEncoder::decode(zmq::message_t &msg, PointCloud<Vec<float>, V
 {
     if(!decodePointCloudGrid(msg))
         return false;
-    std::cout << "DECODE GRID done\n";
     return extractPointCloudFromGrid(point_cloud);
 }
 
 void PointCloudGridEncoder::buildPointCloudGrid(PointCloud<Vec<float>, Vec<float>>* point_cloud, const Vec<BitCount>& M_P, const Vec<BitCount>& M_C) {
+    Measure t;
+    t.startWatch();
+
     // init all cells to default BitCount
     for(auto c : pc_grid_->cells) {
         c->initPoints(M_P.x, M_P.y, M_P.z);
         c->initColors(M_C.x, M_C.y, M_C.z);
     }
+
     Vec<float> cell_range = pc_grid_->bounding_box.calcRange();
-    Vec<float> pos_cell;
     cell_range.x /= (float) pc_grid_->dimensions.x;
     cell_range.y /= (float) pc_grid_->dimensions.y;
     cell_range.z /= (float) pc_grid_->dimensions.z;
     BoundingBox bb_cell(Vec<float>(0.0f,0.0f,0.0f), cell_range);
     BoundingBox bb_clr(Vec<float>(0.0f,0.0f,0.0f), Vec<float>(1.0f,1.0f,1.0f));
-    Vec<uint64_t> compressed_pos;
-    Vec<uint64_t> compressed_clr;
     Vec<uint8_t> p_bits(M_P.x, M_P.y, M_P.z);
     Vec<uint8_t> c_bits(M_C.x, M_C.y, M_C.z);
-    unsigned progress = 0, new_progress = 0;
-    // TODO: PCGrid per thread and after parallel comp merge all.
+
+    // Create one grid per thread
+    // to avoid race conditions writing to shared grid
+    auto max_threads = static_cast<unsigned>(omp_get_max_threads());
+    unsigned num_cells = pc_grid_->dimensions.x * pc_grid_->dimensions.y * pc_grid_->dimensions.z;
+    std::vector<GridVec<uint64_t>> t_grid_pos(max_threads, GridVec<uint64_t>(num_cells));
+    std::vector<GridVec<uint64_t>> t_grid_clr(max_threads, GridVec<uint64_t>(num_cells));
+
+    // compress per-thread grids
+    #pragma omp parallel for
     for(unsigned i=0; i < point_cloud->size(); ++i) {
+        int t_num = omp_get_thread_num();
         if (!pc_grid_->bounding_box.contains(point_cloud->points[i]))
             continue;
         unsigned cell_idx = calcGridCellIndex(point_cloud->points[i], cell_range);
-        pos_cell = mapToCell(point_cloud->points[i], cell_range);
-        compressed_pos = mapVec(pos_cell, bb_cell, p_bits);
-        compressed_clr = mapVec(point_cloud->colors[i], bb_clr, c_bits);
-        (*pc_grid_)[cell_idx]->addVoxel(compressed_pos, compressed_clr);
+        Vec<float> pos_cell = mapToCell(point_cloud->points[i], cell_range);
+        t_grid_pos[t_num][cell_idx].emplace_back(mapVec(pos_cell, bb_cell, p_bits));
+        t_grid_clr[t_num][cell_idx].emplace_back(mapVec(point_cloud->colors[i], bb_clr, c_bits));
     }
+
+    time_t pre_merge = t.stopWatch();
+
+    // merge per-thread grids
+    // TODO: parallelize!?
+    for(unsigned cell_idx = 0; cell_idx < num_cells; ++cell_idx) {
+        for(unsigned t_id=0; t_id < max_threads; ++t_id) {
+            for(unsigned i=0; i < t_grid_pos[t_id][cell_idx].size(); ++i) {
+                (*pc_grid_)[cell_idx]->addVoxel(
+                    t_grid_pos[t_id][cell_idx][i],
+                    t_grid_clr[t_id][cell_idx][i]
+                );
+            }
+        }
+    }
+
+    time_t post_merge = t.stopWatch();
+
     std::cout << "DONE building grid\n";
+    std::cout << "  > took " << post_merge << "ms.\n";
+    std::cout << "    > threaded compression " << pre_merge << "ms.\n";
+    std::cout << "    > merging threads " << post_merge - pre_merge << "ms.\n";
 }
 
 bool PointCloudGridEncoder::extractPointCloudFromGrid(PointCloud<Vec<float>, Vec<float>>* point_cloud)
@@ -115,77 +144,39 @@ bool PointCloudGridEncoder::extractPointCloudFromGrid(PointCloud<Vec<float>, Vec
     }
 
     Measure m;
+    m.startWatch();
 
-    unsigned test_runs = 1;
-    float avg;
-    for(unsigned t=0; t < test_runs; ++t) {
-
-        m.startWatch();
-
-        #pragma omp parallel for
-        for (unsigned i = 0; i < white_cells.size(); ++i) {
-            unsigned cell_idx = white_cells[i];
-            GridCell *cell = pc_grid_->cells[cell_idx];
-            Vec<uint8_t> p_bits(pc_grid_->cells[cell_idx]->points.getNX(), pc_grid_->cells[cell_idx]->points.getNY(),
-                                pc_grid_->cells[cell_idx]->points.getNZ());
-            Vec<uint8_t> c_bits(pc_grid_->cells[cell_idx]->colors.getNX(), pc_grid_->cells[cell_idx]->colors.getNY(),
-                                pc_grid_->cells[cell_idx]->colors.getNZ());
-            Vec<float> glob_cell_min = Vec<float>(cell_range.x * cell_idx_to_dim[cell_idx].x,
-                                                  cell_range.y * cell_idx_to_dim[cell_idx].y,
-                                                  cell_range.z * cell_idx_to_dim[cell_idx].z);
-            glob_cell_min += pc_grid_->bounding_box.min;
-            Vec<float> pos_cell, clr;
-            for (unsigned i = 0; i < cell->size(); ++i) {
-                pos_cell = Encoder::mapVecToFloat(pc_grid_->cells[cell_idx]->points[i], bb_cell, p_bits);
-                clr = Encoder::mapVecToFloat(pc_grid_->cells[cell_idx]->colors[i], bb_clr, c_bits);
-                point_cloud->points[point_idx[cell_idx][i]] = pos_cell + glob_cell_min;
-                point_cloud->colors[point_idx[cell_idx][i]] = clr;
-            }
-        }
-
-        avg += m.stopWatch();
-        std::cout << " >>>> DECOMPRESSION " << t << " DONE in " << m.stopWatch() << "ms.\n";
-    }
-    avg /= test_runs;
-    std::cout << ">>>> AVG " << avg << "ms.\n";
-
-    /*
-    //omp_set_num_threads(8);
-    #pragma omp parallel for collapse(3)
-    for(unsigned x_idx=0; x_idx < pc_grid_->dimensions.x; ++x_idx) {
-        for(unsigned y_idx=0; y_idx < pc_grid_->dimensions.y; ++y_idx) {
-            for(unsigned z_idx=0; z_idx < pc_grid_->dimensions.z; ++z_idx) {
-                Vec<uint64_t> v_pos, v_clr;
-                unsigned cell_idx;
-                GridCell* cell;
-                Vec<uint8_t> p_bits;
-                Vec<uint8_t> c_bits;
-                cell_idx = x_idx +
-                    y_idx * pc_grid_->dimensions.x +
-                    z_idx * pc_grid_->dimensions.x * pc_grid_->dimensions.y;
-                for(unsigned i = 0; i < cell_idx; ++i)
-                    cell_offset += pc_grid_->cells[i]->size();
-                cell = pc_grid_->cells[cell_idx];
-                p_bits.x = cell->points.getNX();
-                p_bits.y = cell->points.getNY();
-                p_bits.z = cell->points.getNZ();
-                c_bits.x = cell->colors.getNX();
-                c_bits.y = cell->colors.getNY();
-                c_bits.z = cell->colors.getNZ();
-                glob_cell_min = Vec<float>(cell_range.x*x_idx, cell_range.y*y_idx, cell_range.z*z_idx);
-                glob_cell_min += pc_grid_->bounding_box.min;
-                for(unsigned i=0; i < cell->size(); ++i) {
-                    v_pos = cell->points[i];
-                    v_clr = cell->colors[i];
-                    pos_cell = Encoder::mapVecToFloat(v_pos, bb_cell, p_bits);
-                    clr = Encoder::mapVecToFloat(v_clr, bb_clr, c_bits);
-                    point_cloud->points[point_idx[cell_idx][i]] = pos_cell+glob_cell_min;
-                    point_cloud->colors[point_idx[cell_idx][i]] = clr;
-                }
-            }
+    #pragma omp parallel for
+    for (unsigned i = 0; i < white_cells.size(); ++i) {
+        unsigned cell_idx = white_cells[i];
+        GridCell *cell = pc_grid_->cells[cell_idx];
+        Vec<uint8_t> p_bits(
+            cell->points.getNX(),
+            cell->points.getNY(),
+            cell->points.getNZ()
+        );
+        Vec<uint8_t> c_bits(
+            cell->colors.getNX(),
+            cell->colors.getNY(),
+            cell->colors.getNZ()
+        );
+        Vec<float> glob_cell_min = Vec<float>(
+            cell_range.x * cell_idx_to_dim[cell_idx].x,
+            cell_range.y * cell_idx_to_dim[cell_idx].y,
+            cell_range.z * cell_idx_to_dim[cell_idx].z
+        );
+        glob_cell_min += pc_grid_->bounding_box.min;
+        Vec<float> pos_cell, clr;
+        for (unsigned j = 0; j < cell->size(); ++j) {
+            pos_cell = Encoder::mapVecToFloat(pc_grid_->cells[cell_idx]->points[j], bb_cell, p_bits);
+            clr = Encoder::mapVecToFloat(pc_grid_->cells[cell_idx]->colors[j], bb_clr, c_bits);
+            point_cloud->points[point_idx[cell_idx][j]] = pos_cell + glob_cell_min;
+            point_cloud->colors[point_idx[cell_idx][j]] = clr;
         }
     }
-    */
+
+    std::cout << "DECOMPRESSION done.\n";
+    std::cout << "  > took " << m.stopWatch() << "ms.\n";
 
     return true;//point_idx == point_cloud->size();
 }
