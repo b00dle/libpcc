@@ -34,6 +34,15 @@ int main(int argc, char* argv[]){
             }
         }
     }
+    PointCloud<Vec<float>, Vec<float>> pc3(BoundingBox(Vec<float>(-1.01f,-1.01f,-1.01f), Vec<float>(1.01f,1.01f,1.01f)));
+    for(float x = -1.0f; x < 1.0; x += 0.5) {
+        for(float y = -1.0f; y < 1.0; y += 0.5) {
+            for(float z = -1.0f; z < 1.0; z += 0.5) {
+                pc3.points.emplace_back(x,y,z);
+                pc3.colors.emplace_back((x+1)/2.0f,(y+1)/2.0f,(z+1)/2.0f);
+            }
+        }
+    }
 
     std::cout << "POINT CLOUD" << std::endl;
     std::cout << "  > size " << pc.size() << "\n";
@@ -89,7 +98,7 @@ int main(int argc, char* argv[]){
         std::cout << "  > success: NO\n";
 
     t.startWatch();
-    std::vector<float> results = t.meanSquaredErrorPC(pc, pc2);
+    std::vector<float> results = t.meanSquaredErrorPC(pc, pc3);
     std::cout << "  > MSE " << results[0] << std::endl;
     std::cout << "  > CLR ERROR " << results[1] << std::endl;
     std::cout << "    > took " << t.stopWatch() << "ms" << std::endl;
