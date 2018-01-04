@@ -289,22 +289,82 @@ bool PointCloudGridEncoder::decodePointCloudGrid(zmq::message_t& msg)
     for(unsigned idx : black_list)
         black_set.insert(idx);
 
-    auto c_header = new CellHeader;
-    auto num_cells = static_cast<unsigned>(pc_grid_->cells.size());
-    // TODO: maybe parallelize!?
+    Measure t;
+    t.startWatch();
+
+    // Extract Cell Headers to
+    // calculate grid data offsets prior to message decoding
+    // to be able to parallelize grid data extraction
+    size_t num_cells = header_->dimensions.x * header_->dimensions.y * header_->dimensions.z;
+    num_cells -= black_list.size();
+    // Stores message offset per whitelisted grid cell
+    // offset encodes start position for memcpy to retrieve point&color data for cell
+    std::vector<size_t> cell_offsets(num_cells, 0);
+    // Stores cell header per whitelisted grid cell
+    std::vector<CellHeader*> cell_headers(num_cells, nullptr);
+    unsigned header_idx = 0;
+    old_offset = offset;
     for(unsigned c_idx = 0; c_idx < num_cells; ++c_idx) {
-        if(black_set.find(c_idx) != black_set.end())
+        if (black_set.find(c_idx) != black_set.end())
             continue;
-        c_header->cell_idx = c_idx;
-        // extract cell_header
-        old_offset = offset;
-        offset = decodeCellHeader(msg, c_header, offset);
-        if(offset == old_offset)
-            return false;
-        // extract cell using cell_header
-        offset = decodeCell(msg, c_header, offset);
+        cell_headers[header_idx] = new CellHeader;
+        cell_headers[header_idx]->cell_idx = c_idx;
+        if(header_idx == 0) {
+            cell_offsets[header_idx] += offset;
+            cell_offsets[header_idx] = decodeCellHeader(msg, cell_headers[header_idx], cell_offsets[header_idx]);
+            if(cell_offsets[header_idx] == old_offset) {
+                while(!cell_headers.empty()) {
+                    delete cell_headers.back();
+                    cell_headers.pop_back();
+                }
+                return false;
+            }
+        }
+        else {
+            cell_offsets[header_idx] = cell_offsets[header_idx-1];
+            cell_offsets[header_idx] += BitVecArray::getByteSize(
+                    cell_headers[header_idx-1]->num_elements,
+                    cell_headers[header_idx-1]->point_encoding_x,
+                    cell_headers[header_idx-1]->point_encoding_y,
+                    cell_headers[header_idx-1]->point_encoding_z
+            );
+            cell_offsets[header_idx] += BitVecArray::getByteSize(
+                    cell_headers[header_idx-1]->num_elements,
+                    cell_headers[header_idx-1]->color_encoding_x,
+                    cell_headers[header_idx-1]->color_encoding_y,
+                    cell_headers[header_idx-1]->color_encoding_z
+            );
+            old_offset = cell_offsets[header_idx];
+            cell_offsets[header_idx] = decodeCellHeader(msg, cell_headers[header_idx], cell_offsets[header_idx]);
+            if(old_offset == cell_offsets[header_idx]) {
+                while(!cell_headers.empty()) {
+                    delete cell_headers.back();
+                    cell_headers.pop_back();
+                }
+                return false;
+            }
+        }
+        ++header_idx;
     }
-    delete c_header;
+
+    time_t pre_cell_decode = t.stopWatch();
+
+    # pragma omp parallel for
+    for(header_idx = 0; header_idx < cell_headers.size(); ++header_idx) {
+        if(cell_offsets[header_idx] == decodeCell(msg, cell_headers[header_idx], cell_offsets[header_idx]))
+            std::cout << "WARNING: No points in cell\n  > Cell should've been blacklisted.\n";
+    }
+
+    while(!cell_headers.empty()) {
+        delete cell_headers.back();
+        cell_headers.pop_back();
+    }
+
+    time_t post_cell_decode = t.stopWatch();
+
+    std::cout << "DECODING CELLS done.\n  > took " << post_cell_decode << "ms.\n";
+    std::cout << "    > decode headers " << pre_cell_decode << "ms.\n";
+    std::cout << "    > decode cells " << post_cell_decode-pre_cell_decode << "ms.\n";
 
     return true;
 }
