@@ -31,6 +31,7 @@ public:
             : grid_dimensions(4,4,4)
             , point_precision(BIT_8, BIT_8, BIT_8)
             , color_precision(BIT_8, BIT_8, BIT_8)
+            , num_threads(24)
         {}
 
         EncodingSettings(const EncodingSettings&) = default;
@@ -38,6 +39,7 @@ public:
         Vec8 grid_dimensions;
         Vec<BitCount> point_precision;
         Vec<BitCount> color_precision;
+        int num_threads;
     };
 
     EncodingSettings settings;
