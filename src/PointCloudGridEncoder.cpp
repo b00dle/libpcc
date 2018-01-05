@@ -31,7 +31,6 @@ bool PointCloudGridEncoder::decode(zmq::message_t &msg, PointCloud<Vec<float>, V
 {
     if(!decodePointCloudGrid(msg))
         return false;
-    std::cout << "DECODE GRID done\n";
     return extractPointCloudFromGrid(point_cloud);
 }
 
@@ -52,7 +51,6 @@ void PointCloudGridEncoder::buildPointCloudGrid(PointCloud<Vec<float>, Vec<float
     Vec<uint64_t> compressed_clr;
     Vec<uint8_t> p_bits(M_P.x, M_P.y, M_P.z);
     Vec<uint8_t> c_bits(M_C.x, M_C.y, M_C.z);
-    unsigned progress = 0, new_progress = 0;
     for(unsigned i=0; i < point_cloud->size(); ++i) {
         if (!pc_grid_->bounding_box.contains(point_cloud->points[i]))
             continue;
@@ -88,6 +86,7 @@ bool PointCloudGridEncoder::extractPointCloudFromGrid(PointCloud<Vec<float>, Vec
     unsigned point_idx=0;
     Vec<uint8_t> p_bits;
     Vec<uint8_t> c_bits;
+    // TODO Parallelize
     for(unsigned x_idx=0; x_idx < pc_grid_->dimensions.x; ++x_idx) {
         for(unsigned y_idx=0; y_idx < pc_grid_->dimensions.y; ++y_idx) {
             for(unsigned z_idx=0; z_idx < pc_grid_->dimensions.z; ++z_idx) {
@@ -104,10 +103,8 @@ bool PointCloudGridEncoder::extractPointCloudFromGrid(PointCloud<Vec<float>, Vec
                 glob_cell_min = Vec<float>(cell_range.x*x_idx, cell_range.y*y_idx, cell_range.z*z_idx);
                 glob_cell_min += pc_grid_->bounding_box.min;
                 for(unsigned i=0; i < cell->size(); ++i) {
-                    v_pos = cell->points[i];
-                    v_clr = cell->colors[i];
-                    pos_cell = mapVecToFloat(v_pos, bb_cell, p_bits);
-                    clr = mapVecToFloat(v_clr, bb_clr, c_bits);
+                    pos_cell = mapVecToFloat(cell->points[i], bb_cell, p_bits);
+                    clr = mapVecToFloat(cell->colors[i], bb_clr, c_bits);
                     point_cloud->points[point_idx] = pos_cell+glob_cell_min;
                     point_cloud->colors[point_idx] = clr;
                     ++point_idx;

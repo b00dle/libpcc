@@ -21,8 +21,8 @@ struct GridCell {
 
     void addVoxel(const Vec<uint64_t>& p, const Vec<uint64_t>& c)
     {
-        points.push_back(p);
-        colors.push_back(c);
+        points.emplace_back(p.x, p.y, p.z);
+        colors.emplace_back(c.x, c.y, c.z);
     }
 
     unsigned size()

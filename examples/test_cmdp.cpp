@@ -26,9 +26,9 @@ int main(int argc, char* argv[]){
     Measure t;
 
     PointCloud<Vec<float>, Vec<float>> pc(BoundingBox(Vec<float>(-1.01f,-1.01f,-1.01f), Vec<float>(1.01f,1.01f,1.01f)));
-    for(float x = -1.0f; x < 1.0; x += 0.5) {
-        for(float y = -1.0f; y < 1.0; y += 0.5) {
-            for(float z = -1.0f; z < 1.0; z += 0.5) {
+    for(float x = -1.0f; x < 1.0; x += 0.04) {
+        for(float y = -1.0f; y < 1.0; y += 0.04) {
+            for(float z = -1.0f; z < 1.0; z += 0.04) {
                 pc.points.emplace_back(x,y,z);
                 pc.colors.emplace_back((x+1)/2.0f,(y+1)/2.0f,(z+1)/2.0f);
             }
@@ -59,6 +59,7 @@ int main(int argc, char* argv[]){
 
     //// TESTING FILE READ/WRITE
 
+    /*
     BinaryFile f(msg);
     if(f.write("./test_pc_grid.txt")) {
         std::cout << "WRITE TO FILE done.\n";
@@ -73,14 +74,15 @@ int main(int argc, char* argv[]){
     else {
         std::cout << "WRITE TO FILE failed.\n";
     }
+    */
 
     //// DECODING
 
     PointCloud<Vec<float>, Vec<float>> pc2;
     t.startWatch();
-    zmq::message_t msg2 = f.get();
-    //bool success = encoder.decode(msg, &pc2);
-    bool success = encoder.decode(msg2, &pc2);
+    //zmq::message_t msg2 = f.get();
+    bool success = encoder.decode(msg, &pc2);
+    //bool success = encoder.decode(msg2, &pc2);
     std::cout << "DECODING DONE in " << t.stopWatch() << "ms.\n";
     std::cout << "  > size " << pc2.size() << "\n";
     if(success)
@@ -88,10 +90,11 @@ int main(int argc, char* argv[]){
     else
         std::cout << "  > success: NO\n";
 
+    /*
     t.startWatch();
     std::cout << "  > MSE " << t.meanSquaredErrorPC(pc, pc2) << std::endl;
     std::cout << "    > took " << t.stopWatch() << "ms" << std::endl;
-
+    */
     /*
     unsigned tick = 0;
     while(true){
