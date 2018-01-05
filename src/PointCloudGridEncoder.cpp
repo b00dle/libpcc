@@ -64,11 +64,11 @@ void PointCloudGridEncoder::buildPointCloudGrid(PointCloud<Vec<float>, Vec<float
     // to avoid race conditions writing to shared grid
     auto max_threads = static_cast<unsigned>(omp_get_max_threads());
     unsigned num_cells = pc_grid_->dimensions.x * pc_grid_->dimensions.y * pc_grid_->dimensions.z;
-
     std::vector<std::vector<size_t>> t_grid_elmts(max_threads, std::vector<size_t>(num_cells, 0));
     std::vector<unsigned> point_cell_idx(point_cloud->size());
 
-    // compress per-thread grids
+    // calculate cell indexes for points
+    // and number of elements per thread grid cell
     #pragma omp parallel for schedule(static)
     for(unsigned i=0; i < point_cloud->size(); ++i) {
         int t_num = omp_get_thread_num();
@@ -79,6 +79,8 @@ void PointCloudGridEncoder::buildPointCloudGrid(PointCloud<Vec<float>, Vec<float
         point_cell_idx[i] = cell_idx;
     }
 
+    // resize grid cells based on summing elements per thread grid cell
+    // and create offsets of thread grid cell insert into main grid
     std::vector<std::vector<unsigned>> t_curr_elmt(max_threads, std::vector<unsigned>(num_cells,0));
     size_t cell_size = 0;
     for(unsigned cell_idx=0; cell_idx < num_cells; ++cell_idx) {
@@ -90,7 +92,7 @@ void PointCloudGridEncoder::buildPointCloudGrid(PointCloud<Vec<float>, Vec<float
 
     time_t calc_offset = t.stopWatch();
 
-    // compress per-thread grids
+    // insert compressed points into main grid
     #pragma omp parallel for schedule(static)
     for(unsigned i=0; i < point_cloud->size(); ++i) {
         int t_num = omp_get_thread_num();
