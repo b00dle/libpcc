@@ -296,12 +296,12 @@ bool PointCloudGridEncoder::decodePointCloudGrid(zmq::message_t& msg)
     // calculate grid data offsets prior to message decoding
     // to be able to parallelize grid data extraction
     size_t num_cells = header_->dimensions.x * header_->dimensions.y * header_->dimensions.z;
-    num_cells -= black_list.size();
+    size_t num_white_cells = num_cells - black_set.size();
     // Stores message offset per whitelisted grid cell
     // offset encodes start position for memcpy to retrieve point&color data for cell
-    std::vector<size_t> cell_offsets(num_cells, 0);
+    std::vector<size_t> cell_offsets(num_white_cells, 0);
     // Stores cell header per whitelisted grid cell
-    std::vector<CellHeader*> cell_headers(num_cells, nullptr);
+    std::vector<CellHeader*> cell_headers(num_white_cells, nullptr);
     unsigned header_idx = 0;
     old_offset = offset;
     for(unsigned c_idx = 0; c_idx < num_cells; ++c_idx) {
