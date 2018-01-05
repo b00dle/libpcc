@@ -22,7 +22,6 @@ int main(int argc, char* argv[]){
     std::string endpoint("tcp://" + socket_name);
     socket.bind(endpoint.c_str());
     */
-
     Measure t;
 
     PointCloud<Vec<float>, Vec<float>> pc(BoundingBox(Vec<float>(-1.01f,-1.01f,-1.01f), Vec<float>(1.01f,1.01f,1.01f)));
@@ -82,7 +81,6 @@ int main(int argc, char* argv[]){
     t.startWatch();
     //zmq::message_t msg2 = f.get();
     bool success = encoder.decode(msg, &pc2);
-    //bool success = encoder.decode(msg2, &pc2);
     std::cout << "DECODING DONE in " << t.stopWatch() << "ms.\n";
     std::cout << "  > size " << pc2.size() << "\n";
     if(success)
@@ -95,6 +93,7 @@ int main(int argc, char* argv[]){
     std::cout << "  > MSE " << t.meanSquaredErrorPC(pc, pc2) << std::endl;
     std::cout << "    > took " << t.stopWatch() << "ms" << std::endl;
     */
+
     /*
     unsigned tick = 0;
     while(true){
