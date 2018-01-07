@@ -26,9 +26,9 @@ zmq::message_t PointCloudGridEncoder::encode(PointCloud<Vec<float>, Vec<float>>*
     // set properties for parallelization
     omp_set_num_threads(settings.num_threads);
     // Set properties for new grid
-    pc_grid_->resize(settings.grid_dimensions);
+    pc_grid_->resize(settings.grid_precision.dimensions);
     pc_grid_->bounding_box = point_cloud->bounding_box;
-    buildPointCloudGrid(point_cloud, settings.point_precision, settings.color_precision);
+    buildPointCloudGrid(point_cloud);
     return encodePointCloudGrid();
 };
 
@@ -41,14 +41,16 @@ bool PointCloudGridEncoder::decode(zmq::message_t &msg, PointCloud<Vec<float>, V
     return extractPointCloudFromGrid(point_cloud);
 }
 
-void PointCloudGridEncoder::buildPointCloudGrid(PointCloud<Vec<float>, Vec<float>>* point_cloud, const Vec<BitCount>& M_P, const Vec<BitCount>& M_C) {
+void PointCloudGridEncoder::buildPointCloudGrid(PointCloud<Vec<float>, Vec<float>>* point_cloud) {
     Measure t;
     t.startWatch();
 
     // init all cells to default BitCount
-    for(auto c : pc_grid_->cells) {
-        c->initPoints(M_P.x, M_P.y, M_P.z);
-        c->initColors(M_C.x, M_C.y, M_C.z);
+    for(unsigned cell_idx = 0; cell_idx < pc_grid_->cells.size(); ++cell_idx) {
+        Vec<BitCount> M_P = settings.grid_precision.point_precision[cell_idx];
+        Vec<BitCount> M_C = settings.grid_precision.color_precision[cell_idx];
+        pc_grid_->cells[cell_idx]->initPoints(M_P.x, M_P.y, M_P.z);
+        pc_grid_->cells[cell_idx]->initColors(M_C.x, M_C.y, M_C.z);
     }
 
     Vec<float> cell_range = pc_grid_->bounding_box.calcRange();
@@ -57,8 +59,6 @@ void PointCloudGridEncoder::buildPointCloudGrid(PointCloud<Vec<float>, Vec<float
     cell_range.z /= (float) pc_grid_->dimensions.z;
     BoundingBox bb_cell(Vec<float>(0.0f,0.0f,0.0f), cell_range);
     BoundingBox bb_clr(Vec<float>(0.0f,0.0f,0.0f), Vec<float>(1.0f,1.0f,1.0f));
-    Vec<uint8_t> p_bits(M_P.x, M_P.y, M_P.z);
-    Vec<uint8_t> c_bits(M_C.x, M_C.y, M_C.z);
 
     // Create one grid per thread
     // to avoid race conditions writing to shared grid
@@ -101,8 +101,10 @@ void PointCloudGridEncoder::buildPointCloudGrid(PointCloud<Vec<float>, Vec<float
         Vec<float> pos_cell = mapToCell(point_cloud->points[i], cell_range);
         unsigned cell_idx = point_cell_idx[i];
         unsigned elmnt_idx = t_curr_elmt[t_num][cell_idx];
-        (*pc_grid_)[cell_idx]->points[elmnt_idx] = mapVec(pos_cell, bb_cell, p_bits);
-        (*pc_grid_)[cell_idx]->colors[elmnt_idx] = mapVec(point_cloud->colors[i], bb_clr, c_bits);
+        (*pc_grid_)[cell_idx]->points[elmnt_idx] = mapVec(pos_cell, bb_cell,
+                                                          settings.grid_precision.point_precision[cell_idx]);
+        (*pc_grid_)[cell_idx]->colors[elmnt_idx] = mapVec(point_cloud->colors[i], bb_clr,
+                                                          settings.grid_precision.color_precision[cell_idx]);
         t_curr_elmt[t_num][cell_idx] += 1;
     }
 

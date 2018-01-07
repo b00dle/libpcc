@@ -97,4 +97,37 @@ private:
     }
 };
 
+struct GridPrecisionDescriptor {
+    explicit GridPrecisionDescriptor(const Vec8& t_dimensions=Vec8(4,4,4),
+                                     const Vec<BitCount>& t_point_prec=Vec<BitCount>(BIT_4,BIT_4,BIT_4),
+                                     const Vec<BitCount>& t_color_prec=Vec<BitCount>(BIT_4,BIT_4,BIT_4))
+        : dimensions(t_dimensions)
+        , default_point_precision(t_point_prec)
+        , default_color_precision(t_color_prec)
+        , point_precision()
+        , color_precision()
+    {
+        initCells();
+    }
+
+    void resize(const Vec8& dim) {
+        point_precision.clear();
+        color_precision.clear();
+        dimensions = dim;
+        initCells();
+    }
+
+    Vec8 dimensions;
+    Vec<BitCount> default_point_precision;
+    Vec<BitCount> default_color_precision;
+    std::vector<Vec<BitCount>> point_precision;
+    std::vector<Vec<BitCount>> color_precision;
+private:
+    void initCells() {
+        unsigned idx_count = dimensions.x * dimensions.y * dimensions.z;
+        point_precision.resize(idx_count, default_point_precision);
+        color_precision.resize(idx_count, default_color_precision);
+    }
+};
+
 #endif //LIBPCC_POINT_CLOUD_GRID_HPP

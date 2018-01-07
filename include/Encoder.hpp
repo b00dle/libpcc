@@ -23,21 +23,10 @@ public:
      * Maps 'from' vec into range determined by bb and bit range per component
      * Results is returned as unsigned long to make sure values fit.
      */
-    static const Vec<uint64_t> mapVec(const Vec<float>& from, BoundingBox const& bb, const Vec<uint8_t>& bits) {
-        Vec<uint64_t> res;
-        res.x = mapToBit(from.x, bb.min.x, bb.max.x, bits.x);
-        res.y = mapToBit(from.y, bb.min.y, bb.max.y, bits.y);
-        res.z = mapToBit(from.z, bb.min.z, bb.max.z, bits.z);
-        return res;
-    };
-
-    static const Vec<float> mapVecToFloat(const Vec<uint64_t>& from, BoundingBox const& bb, const Vec<uint8_t>& bits) {
-        Vec<float> res;
-        res.x = mapFromBit((uint32_t) from.x, bb.min.x, bb.max.x, bits.x);
-        res.y = mapFromBit((uint32_t) from.y, bb.min.y, bb.max.y, bits.y);
-        res.z = mapFromBit((uint32_t) from.z, bb.min.z, bb.max.z, bits.z);
-        return res;
-    };
+    static const Vec<uint64_t> mapVec(const Vec<float>& from, BoundingBox const& bb, const Vec<uint8_t>& bits);
+    static const Vec<uint64_t> mapVec(const Vec<float>& from, BoundingBox const& bb, const Vec<BitCount>& bits);
+    static const Vec<float> mapVecToFloat(const Vec<uint64_t>& from, BoundingBox const& bb, const Vec<uint8_t>& bits);
+    static const Vec<float> mapVecToFloat(const Vec<uint64_t>& from, BoundingBox const& bb, const Vec<BitCount>& bits);
 };
 
 

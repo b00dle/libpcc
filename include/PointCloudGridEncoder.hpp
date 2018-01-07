@@ -28,17 +28,13 @@ public:
     */
     struct EncodingSettings {
         EncodingSettings()
-            : grid_dimensions(4,4,4)
-            , point_precision(BIT_8, BIT_8, BIT_8)
-            , color_precision(BIT_8, BIT_8, BIT_8)
+            : grid_precision()
             , num_threads(24)
         {}
 
         EncodingSettings(const EncodingSettings&) = default;
 
-        Vec8 grid_dimensions;
-        Vec<BitCount> point_precision;
-        Vec<BitCount> color_precision;
+        GridPrecisionDescriptor grid_precision;
         int num_threads;
     };
 
@@ -125,8 +121,7 @@ public:
 
 private:
     /* Fills pc_grid_ from given point_cloud and settings */
-    void buildPointCloudGrid(PointCloud<Vec<float>, Vec<float>>* point_cloud,
-                             const Vec<BitCount>& M_P, const Vec<BitCount>& M_C);
+    void buildPointCloudGrid(PointCloud<Vec<float>, Vec<float>>* point_cloud);
 
     /*
      * Extracts a PointCloud from pc_grid_.
