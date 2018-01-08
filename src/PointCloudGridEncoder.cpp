@@ -32,13 +32,13 @@ zmq::message_t PointCloudGridEncoder::encode(PointCloud<Vec<float>, Vec<float>>*
     return encodePointCloudGrid();
 };
 
-zmq::message_t PointCloudGridEncoder::encode(UncompressedPointCloud* point_cloud)
+zmq::message_t PointCloudGridEncoder::encode(std::vector<UncompressedVoxel>* point_cloud)
 {
     // set properties for parallelization
     omp_set_num_threads(settings.num_threads);
     // Set properties for new grid
     pc_grid_->resize(settings.grid_precision.dimensions);
-    pc_grid_->bounding_box = point_cloud->bounding_box;
+    pc_grid_->bounding_box = settings.grid_precision.bounding_box;
     buildPointCloudGrid(point_cloud);
     return encodePointCloudGrid();
 };
@@ -52,7 +52,7 @@ bool PointCloudGridEncoder::decode(zmq::message_t &msg, PointCloud<Vec<float>, V
     return extractPointCloudFromGrid(point_cloud);
 }
 
-bool PointCloudGridEncoder::decode(zmq::message_t &msg, UncompressedPointCloud* point_cloud)
+bool PointCloudGridEncoder::decode(zmq::message_t &msg, std::vector<UncompressedVoxel>* point_cloud)
 {
     // set properties for parallelization
     omp_set_num_threads(settings.num_threads);
@@ -137,7 +137,7 @@ void PointCloudGridEncoder::buildPointCloudGrid(PointCloud<Vec<float>, Vec<float
 }
 
 
-void PointCloudGridEncoder::buildPointCloudGrid(UncompressedPointCloud* point_cloud) {
+void PointCloudGridEncoder::buildPointCloudGrid(std::vector<UncompressedVoxel>* point_cloud) {
     Measure t;
     t.startWatch();
 
@@ -161,16 +161,16 @@ void PointCloudGridEncoder::buildPointCloudGrid(UncompressedPointCloud* point_cl
     auto max_threads = static_cast<unsigned>(omp_get_max_threads());
     unsigned num_cells = pc_grid_->dimensions.x * pc_grid_->dimensions.y * pc_grid_->dimensions.z;
     std::vector<std::vector<size_t>> t_grid_elmts(max_threads, std::vector<size_t>(num_cells, 0));
-    std::vector<unsigned> point_cell_idx(point_cloud->data.size());
+    std::vector<unsigned> point_cell_idx(point_cloud->size());
 
     // calculate cell indexes for points
     // and number of elements per thread grid cell
 #pragma omp parallel for schedule(static)
-    for(unsigned i=0; i < point_cloud->data.size(); ++i) {
+    for(unsigned i=0; i < point_cloud->size(); ++i) {
         int t_num = omp_get_thread_num();
-        if (!pc_grid_->bounding_box.contains(point_cloud->data[i].pos))
+        if (!pc_grid_->bounding_box.contains((*point_cloud)[i].pos))
             continue;
-        unsigned cell_idx = calcGridCellIndex(point_cloud->data[i].pos, cell_range);
+        unsigned cell_idx = calcGridCellIndex((*point_cloud)[i].pos, cell_range);
         t_grid_elmts[t_num][cell_idx] += 1;
         point_cell_idx[i] = cell_idx;
     }
@@ -190,16 +190,16 @@ void PointCloudGridEncoder::buildPointCloudGrid(UncompressedPointCloud* point_cl
 
     // insert compressed points into main grid
 #pragma omp parallel for schedule(static)
-    for(unsigned i=0; i < point_cloud->data.size(); ++i) {
+    for(unsigned i=0; i < point_cloud->size(); ++i) {
         int t_num = omp_get_thread_num();
-        if (!pc_grid_->bounding_box.contains(point_cloud->data[i].pos))
+        if (!pc_grid_->bounding_box.contains((*point_cloud)[i].pos))
             continue;
-        Vec<float> pos_cell = mapToCell(point_cloud->data[i].pos, cell_range);
+        Vec<float> pos_cell = mapToCell((*point_cloud)[i].pos, cell_range);
         unsigned cell_idx = point_cell_idx[i];
         unsigned elmnt_idx = t_curr_elmt[t_num][cell_idx];
         (*pc_grid_)[cell_idx]->points[elmnt_idx] = mapVec(pos_cell, bb_cell,
                                                           settings.grid_precision.point_precision[cell_idx]);
-        (*pc_grid_)[cell_idx]->colors[elmnt_idx] = mapVec(point_cloud->data[i].color_rgba, bb_clr,
+        (*pc_grid_)[cell_idx]->colors[elmnt_idx] = mapVec((*point_cloud)[i].color_rgba, bb_clr,
                                                           settings.grid_precision.color_precision[cell_idx]);
         t_curr_elmt[t_num][cell_idx] += 1;
     }
@@ -295,15 +295,15 @@ bool PointCloudGridEncoder::extractPointCloudFromGrid(PointCloud<Vec<float>, Vec
     return true;//point_idx == point_cloud->size();
 }
 
-bool PointCloudGridEncoder::extractPointCloudFromGrid(UncompressedPointCloud* point_cloud)
+bool PointCloudGridEncoder::extractPointCloudFromGrid(std::vector<UncompressedVoxel>* point_cloud)
 {
     // calc num total points once
     // to resize point_cloud
     unsigned num_grid_points = 0;
     for(auto cell: pc_grid_->cells)
         num_grid_points += cell->size();
-    point_cloud->data.clear();
-    point_cloud->data.resize(num_grid_points);
+    point_cloud->clear();
+    point_cloud->resize(num_grid_points);
     // calc cell range for local point mapping
     Vec<float> cell_range = pc_grid_->bounding_box.calcRange();
     cell_range.x /= (float) pc_grid_->dimensions.x;
@@ -368,13 +368,13 @@ bool PointCloudGridEncoder::extractPointCloudFromGrid(UncompressedPointCloud* po
             pos_cell = Encoder::mapVecToFloat(pc_grid_->cells[cell_idx]->points[j], bb_cell, p_bits);
             pos_cell += glob_cell_min;
             clr = Encoder::mapVecToFloat(pc_grid_->cells[cell_idx]->colors[j], bb_clr, c_bits);
-            point_cloud->data[point_idx[cell_idx][j]].pos[0] = pos_cell.x;
-            point_cloud->data[point_idx[cell_idx][j]].pos[1] = pos_cell.y;
-            point_cloud->data[point_idx[cell_idx][j]].pos[2] = pos_cell.z;
-            point_cloud->data[point_idx[cell_idx][j]].color_rgba[0] = (unsigned char) clr.x;
-            point_cloud->data[point_idx[cell_idx][j]].color_rgba[1] = (unsigned char) clr.y;
-            point_cloud->data[point_idx[cell_idx][j]].color_rgba[2] = (unsigned char) clr.z;
-            point_cloud->data[point_idx[cell_idx][j]].color_rgba[3] = 255;
+            (*point_cloud)[point_idx[cell_idx][j]].pos[0] = pos_cell.x;
+            (*point_cloud)[point_idx[cell_idx][j]].pos[1] = pos_cell.y;
+            (*point_cloud)[point_idx[cell_idx][j]].pos[2] = pos_cell.z;
+            (*point_cloud)[point_idx[cell_idx][j]].color_rgba[0] = (unsigned char) clr.x;
+            (*point_cloud)[point_idx[cell_idx][j]].color_rgba[1] = (unsigned char) clr.y;
+            (*point_cloud)[point_idx[cell_idx][j]].color_rgba[2] = (unsigned char) clr.z;
+            (*point_cloud)[point_idx[cell_idx][j]].color_rgba[3] = 255;
         }
     }
 
