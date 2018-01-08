@@ -25,20 +25,20 @@ int main(int argc, char* argv[]){
     Measure t;
 
     PointCloud<Vec<float>, Vec<float>> pc(BoundingBox(Vec<float>(-1.01f,-1.01f,-1.01f), Vec<float>(1.01f,1.01f,1.01f)));
-    UncompressedPointCloud pc_uncomp(BoundingBox(Vec<float>(-1.01f,-1.01f,-1.01f), Vec<float>(1.01f,1.01f,1.01f)));
+    std::vector<UncompressedVoxel> pc_vec;
     for(float x = -1.0f; x < 1.0; x += 0.04) {
         for(float y = -1.0f; y < 1.0; y += 0.04) {
             for(float z = -1.0f; z < 1.0; z += 0.04) {
                 pc.points.emplace_back(x,y,z);
                 pc.colors.emplace_back((x+1)/2.0f,(y+1)/2.0f,(z+1)/2.0f);
-                pc_uncomp.data.push_back(UncompressedVoxel());
-                pc_uncomp.data.back().pos[0] = x;
-                pc_uncomp.data.back().pos[1] = y;
-                pc_uncomp.data.back().pos[2] = z;
-                pc_uncomp.data.back().color_rgba[0] = static_cast<unsigned char>(pc.colors.back().x*255.0f);
-                pc_uncomp.data.back().color_rgba[1] = static_cast<unsigned char>(pc.colors.back().y*255.0f);
-                pc_uncomp.data.back().color_rgba[2] = static_cast<unsigned char>(pc.colors.back().z*255.0f);
-                pc_uncomp.data.back().color_rgba[3] = 255;
+                pc_vec.push_back(UncompressedVoxel());
+                pc_vec.back().pos[0] = x;
+                pc_vec.back().pos[1] = y;
+                pc_vec.back().pos[2] = z;
+                pc_vec.back().color_rgba[0] = static_cast<unsigned char>(pc.colors.back().x*255.0f);
+                pc_vec.back().color_rgba[1] = static_cast<unsigned char>(pc.colors.back().y*255.0f);
+                pc_vec.back().color_rgba[2] = static_cast<unsigned char>(pc.colors.back().z*255.0f);
+                pc_vec.back().color_rgba[3] = 255;
             }
         }
     }
@@ -50,14 +50,15 @@ int main(int argc, char* argv[]){
 
     PointCloudGridEncoder encoder;
     encoder.settings.grid_precision = GridPrecisionDescriptor(
-        Vec8(4,4,4), // dimensions
-        Vec<BitCount>(BIT_4,BIT_4,BIT_4), // default point encoding
-        Vec<BitCount>(BIT_8,BIT_8,BIT_8)  // default color encoding
+            Vec8(4,4,4), // dimensions
+            pc.bounding_box, // bounding box
+            Vec<BitCount>(BIT_4,BIT_4,BIT_4), // default point encoding
+            Vec<BitCount>(BIT_8,BIT_8,BIT_8)  // default color encoding
     );
     encoder.settings.num_threads = 24;
 
     t.startWatch();
-    zmq::message_t msg = encoder.encode(&pc_uncomp);
+    zmq::message_t msg = encoder.encode(&pc_vec);
 
     std::cout << "ENCODING DONE in " << t.stopWatch() << "ms.\n";
     auto size_bytes = static_cast<int>(msg.size());
@@ -105,7 +106,7 @@ int main(int argc, char* argv[]){
     std::cout << "  > MSE " << t.meanSquaredErrorPC(pc, pc2) << std::endl;
     std::cout << "    > took " << t.stopWatch() << "ms" << std::endl;
     */
-    
+
     /*
     unsigned tick = 0;
     while(true){

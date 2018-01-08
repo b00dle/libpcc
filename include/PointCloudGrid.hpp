@@ -99,9 +99,11 @@ private:
 
 struct GridPrecisionDescriptor {
     explicit GridPrecisionDescriptor(const Vec8& t_dimensions=Vec8(4,4,4),
+                                     const BoundingBox& t_bounding_box=BoundingBox(),
                                      const Vec<BitCount>& t_point_prec=Vec<BitCount>(BIT_4,BIT_4,BIT_4),
                                      const Vec<BitCount>& t_color_prec=Vec<BitCount>(BIT_4,BIT_4,BIT_4))
         : dimensions(t_dimensions)
+        , bounding_box(t_bounding_box)
         , default_point_precision(t_point_prec)
         , default_color_precision(t_color_prec)
         , point_precision()
@@ -118,6 +120,7 @@ struct GridPrecisionDescriptor {
     }
 
     Vec8 dimensions;
+    BoundingBox bounding_box;
     Vec<BitCount> default_point_precision;
     Vec<BitCount> default_color_precision;
     std::vector<Vec<BitCount>> point_precision;
