@@ -83,14 +83,29 @@ void BitVec::setX(uint64_t x_t)
     x_->set(x_t);
 }
 
+void BitVec::setX(size_t i, bool val)
+{
+    x_->setBit(i, val);
+}
+
 void BitVec::setY(uint64_t y_t)
 {
     y_->set(y_t);
 }
 
+void BitVec::setY(size_t i, bool val)
+{
+    y_->setBit(i, val);
+}
+
 void BitVec::setZ(uint64_t z_t)
 {
     z_->set(z_t);
+}
+
+void BitVec::setZ(size_t i, bool val)
+{
+    z_->setBit(i, val);
 }
 
 const std::vector<bool> BitVec::getPackedBitset() const

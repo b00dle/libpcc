@@ -37,3 +37,39 @@ float Encoder::mapFromBit(uint32_t value, float min, float max, uint8_t bits, fl
         return res;
     }
 }
+
+const Vec<uint64_t> Encoder::mapVec(const Vec<float>& from, BoundingBox const& bb, const Vec<uint8_t>& bits)
+{
+    Vec<uint64_t> res;
+    res.x = mapToBit(from.x, bb.min.x, bb.max.x, bits.x);
+    res.y = mapToBit(from.y, bb.min.y, bb.max.y, bits.y);
+    res.z = mapToBit(from.z, bb.min.z, bb.max.z, bits.z);
+    return res;
+}
+
+const Vec<uint64_t> Encoder::mapVec(const Vec<float>& from, BoundingBox const& bb, const Vec<BitCount>& bits)
+{
+    Vec<uint64_t> res;
+    res.x = mapToBit(from.x, bb.min.x, bb.max.x, bits.x);
+    res.y = mapToBit(from.y, bb.min.y, bb.max.y, bits.y);
+    res.z = mapToBit(from.z, bb.min.z, bb.max.z, bits.z);
+    return res;
+}
+
+const Vec<float> Encoder::mapVecToFloat(const Vec<uint64_t>& from, BoundingBox const& bb, const Vec<uint8_t>& bits)
+{
+    Vec<float> res;
+    res.x = mapFromBit((uint32_t) from.x, bb.min.x, bb.max.x, bits.x);
+    res.y = mapFromBit((uint32_t) from.y, bb.min.y, bb.max.y, bits.y);
+    res.z = mapFromBit((uint32_t) from.z, bb.min.z, bb.max.z, bits.z);
+    return res;
+}
+
+const Vec<float> Encoder::mapVecToFloat(const Vec<uint64_t>& from, BoundingBox const& bb, const Vec<BitCount>& bits)
+{
+    Vec<float> res;
+    res.x = mapFromBit((uint32_t) from.x, bb.min.x, bb.max.x, bits.x);
+    res.y = mapFromBit((uint32_t) from.y, bb.min.y, bb.max.y, bits.y);
+    res.z = mapFromBit((uint32_t) from.z, bb.min.z, bb.max.z, bits.z);
+    return res;
+}

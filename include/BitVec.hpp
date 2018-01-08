@@ -87,11 +87,20 @@ public:
     /* Sets x value from uint64_t. */
     void setX(uint64_t x_t);
 
+    /* Sets ith bit of x value */
+    void setX(size_t i, bool val);
+
     /* Sets y value from uint64_t. */
     void setY(uint64_t y_t);
 
+    /* Sets ith bit of y value */
+    void setY(size_t i, bool val);
+
     /* Sets z value from uint64_t. */
     void setZ(uint64_t z_t);
+
+    /* Sets ith bit of z value */
+    void setZ(size_t i, bool val);
 
     /*
      * Returns vector of bool encoded BITS,

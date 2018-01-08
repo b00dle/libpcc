@@ -22,7 +22,6 @@ int main(int argc, char* argv[]){
     std::string endpoint("tcp://" + socket_name);
     socket.bind(endpoint.c_str());
     */
-
     Measure t;
 
     PointCloud<Vec<float>, Vec<float>> pc(BoundingBox(Vec<float>(-1.01f,-1.01f,-1.01f), Vec<float>(1.01f,1.01f,1.01f)));
@@ -41,9 +40,12 @@ int main(int argc, char* argv[]){
     //// ENCODING
 
     PointCloudGridEncoder encoder;
-    encoder.settings.grid_dimensions = Vec8(4,4,4);
-    encoder.settings.point_precision = Vec<BitCount>(BIT_8,BIT_8,BIT_8);
-    encoder.settings.color_precision = Vec<BitCount>(BIT_8,BIT_8,BIT_8);
+    encoder.settings.grid_precision = GridPrecisionDescriptor(
+        Vec8(4,4,4), // dimensions
+        Vec<BitCount>(BIT_4,BIT_4,BIT_4), // default point encoding
+        Vec<BitCount>(BIT_8,BIT_8,BIT_8)  // default color encoding
+    );
+    encoder.settings.num_threads = 24;
 
     t.startWatch();
     zmq::message_t msg = encoder.encode(&pc);
@@ -80,6 +82,7 @@ int main(int argc, char* argv[]){
 
     PointCloud<Vec<float>, Vec<float>> pc2;
     t.startWatch();
+    //zmq::message_t msg2 = f.get();
     bool success = encoder.decode(msg, &pc2);
     std::cout << "DECODING DONE in " << t.stopWatch() << "ms.\n";
     std::cout << "  > size " << pc2.size() << "\n";
@@ -87,18 +90,6 @@ int main(int argc, char* argv[]){
         std::cout << "  > success: YES\n";
     else
         std::cout << "  > success: NO\n";
-
-    /*
-    std::cout << "PC 1" << std::endl;
-    for(auto p: pc.points) {
-        std::cout << "  > " << p.x << "," << p.y << "," << p.z << std::endl;
-    }
-
-    std::cout << "PC 2" << std::endl;
-    for(auto p: pc2.points) {
-        std::cout << "  > " << p.x << "," << p.y << "," << p.z << std::endl;
-    }
-    */
 
     /*
     t.startWatch();
