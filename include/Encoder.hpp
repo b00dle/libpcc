@@ -38,8 +38,12 @@ public:
         res.z = mapFromBit((uint32_t) from.z, bb.min.z, bb.max.z, bits.z);
         return res;
     };
-
+    // Color Conversion to YUV standard
     static Vec<float> const rgbToYuv(Vec<float> const& rgb);
+    // Color Conversion to CIE - XYZ standard
+    static Vec<float> const rgbToXyz(Vec<float> const& rgb);
+    // Color Conversion to CIE LAB standard
+    static Vec<float> const rgbToCieLab(Vec<float> const& rgb);
 };
 
 

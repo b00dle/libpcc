@@ -46,3 +46,28 @@ Vec<float> const Encoder::rgbToYuv(Vec<float> const& rgb) {
 
   return yuv;
 }
+
+Vec<float> const Encoder::rgbToXyz(Vec<float> const& rgb) {
+  Vec<float> xyz;
+
+  xyz.x = rgb.x * 0.4124564f + rgb.y * 0.3575761f + rgb.z * 0.1804375f;
+  xyz.y = rgb.x * 0.4124564f + rgb.y * 0.3575761f + rgb.z * 0.1804375f;
+  xyz.z = rgb.x * 0.4124564f + rgb.y * 0.3575761f + rgb.z * 0.1804375f;
+
+  return xyz;
+}
+
+Vec<float> const Encoder::rgbToCieLab(Vec<float> const& rgb) {
+  Vec<float> lab;
+  Vec<float> xyz = rgbToXyz(rgb);
+  Vec<float> XYZ_D50_2 = [96.422f, 100f, 82.521f]; //D50 Standard; 2° ViewAngle
+  Vec<float> XYZ_D65_2 = [95.047f, 100f, 108.883f];
+  Vec<float> XYZ_D50_10 = [96.720f, 100f, 81.427f];
+  Vec<float> XYZ_D65_10 = [94.811f, 100f, 107.304f];
+
+  lab.x = 116.0f * pow((xyz.y / XYZ_D65_2.y), (1/3)) - 16;
+  lab.y = 500.0f * (pow((xyz.x / XYZ_D65_2.x), (1/3)) - pow((xyz.y / XYZ_D65_2.y), (1/3)));
+  lab.z = 200.0f * (pow((xyz.y / XYZ_D65_2.y), (1/3)) - pow((xyz.z / XYZ_D65_2.z), (1/3)));
+
+  return lab;
+}

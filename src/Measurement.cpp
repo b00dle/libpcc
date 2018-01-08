@@ -153,3 +153,31 @@ Measure::~Measure()
 
     return color_deviation;
   }
+
+  float Measure::colorErrorXyz(Vec<float> point1, Vec<float> point2) {
+    //Calculate YUV Color values for point1 and point2
+    Vec<float> point1_lab = Encoder::rgbToXyz(point1);
+    Vec<float> point2_lab = Encoder::rgbToXyz(point2);
+
+    float color_x = (point1_lab.x - point2_lab.x) * (point1_lab.x - point2_lab.x);
+    float color_y = (point1_lab.y - point2_lab.y) * (point1_lab.y - point2_lab.y);
+    float color_z = (point1_lab.z - point2_lab.z) * (point1_lab.z - point2_lab.z);
+
+    float color_deviation = sqrt(color_L + color_a + color_b);
+
+    return color_deviation;
+  }
+
+  float Measure::colorErrorCielab(Vec<float> point1, Vec<float> point2) {
+    //Calculate YUV Color values for point1 and point2
+    Vec<float> point1_lab = Encoder::rgbToCieLab(point1);
+    Vec<float> point2_lab = Encoder::rgbToCieLab(point2);
+
+    float color_L = (point1_lab.x - point2_lab.x) * (point1_lab.x - point2_lab.x);
+    float color_a = (point1_lab.y - point2_lab.y) * (point1_lab.y - point2_lab.y);
+    float color_b = (point1_lab.z - point2_lab.z) * (point1_lab.z - point2_lab.z);
+
+    float color_deviation = sqrt(color_L + color_a + color_b);
+
+    return color_deviation;
+  }

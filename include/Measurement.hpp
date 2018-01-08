@@ -31,6 +31,8 @@ public:
 
   float colorErrorYuv(Vec<float>, Vec<float>);
   float colorErrorYuvWithoutY(Vec<float>, Vec<float>);
+  float colorErrorCielab(Vec<float>, Vec<float>);
+  float colorErrorXyz(Vec<float>, Vec<float>);
 
 private:
 time_point<system_clock> m_start_time;
