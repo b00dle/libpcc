@@ -112,7 +112,7 @@ public:
     /* Compresses given PointCloud and creates message from it. */
     zmq::message_t encode(PointCloud<Vec<float>, Vec<float>>* point_cloud);
     /* Compresses given UncompressedPointCloud and creates message from it. */
-    zmq::message_t encode(std::vector<UncompressedVoxel>* point_cloud);
+    zmq::message_t encode(const std::vector<UncompressedVoxel>& point_cloud);
 
     /* Decodes given message into point_cloud. Returns success. */
     bool decode(zmq::message_t& msg, PointCloud<Vec<float>, Vec<float>>* point_cloud);
@@ -124,7 +124,7 @@ private:
     void buildPointCloudGrid(PointCloud<Vec<float>, Vec<float>>* point_cloud);
 
     /* Fills pc_grid_ from given point_cloud and settings */
-    void buildPointCloudGrid(std::vector<UncompressedVoxel>* point_cloud);
+    void buildPointCloudGrid(const std::vector<UncompressedVoxel>& point_cloud);
 
     /*
      * Extracts a PointCloud from pc_grid_.

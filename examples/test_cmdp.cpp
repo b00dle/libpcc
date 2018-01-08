@@ -58,7 +58,7 @@ int main(int argc, char* argv[]){
     encoder.settings.num_threads = 24;
 
     t.startWatch();
-    zmq::message_t msg = encoder.encode(&pc_vec);
+    zmq::message_t msg = encoder.encode(pc_vec);
 
     std::cout << "ENCODING DONE in " << t.stopWatch() << "ms.\n";
     auto size_bytes = static_cast<int>(msg.size());

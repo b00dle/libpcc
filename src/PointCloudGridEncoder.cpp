@@ -32,7 +32,7 @@ zmq::message_t PointCloudGridEncoder::encode(PointCloud<Vec<float>, Vec<float>>*
     return encodePointCloudGrid();
 };
 
-zmq::message_t PointCloudGridEncoder::encode(std::vector<UncompressedVoxel>* point_cloud)
+zmq::message_t PointCloudGridEncoder::encode(const std::vector<UncompressedVoxel>& point_cloud)
 {
     // set properties for parallelization
     omp_set_num_threads(settings.num_threads);
@@ -137,7 +137,7 @@ void PointCloudGridEncoder::buildPointCloudGrid(PointCloud<Vec<float>, Vec<float
 }
 
 
-void PointCloudGridEncoder::buildPointCloudGrid(std::vector<UncompressedVoxel>* point_cloud) {
+void PointCloudGridEncoder::buildPointCloudGrid(const std::vector<UncompressedVoxel>& point_cloud) {
     Measure t;
     t.startWatch();
 
@@ -161,16 +161,16 @@ void PointCloudGridEncoder::buildPointCloudGrid(std::vector<UncompressedVoxel>* 
     auto max_threads = static_cast<unsigned>(omp_get_max_threads());
     unsigned num_cells = pc_grid_->dimensions.x * pc_grid_->dimensions.y * pc_grid_->dimensions.z;
     std::vector<std::vector<size_t>> t_grid_elmts(max_threads, std::vector<size_t>(num_cells, 0));
-    std::vector<unsigned> point_cell_idx(point_cloud->size());
+    std::vector<unsigned> point_cell_idx(point_cloud.size());
 
     // calculate cell indexes for points
     // and number of elements per thread grid cell
 #pragma omp parallel for schedule(static)
-    for(unsigned i=0; i < point_cloud->size(); ++i) {
+    for(unsigned i=0; i < point_cloud.size(); ++i) {
         int t_num = omp_get_thread_num();
-        if (!pc_grid_->bounding_box.contains((*point_cloud)[i].pos))
+        if (!pc_grid_->bounding_box.contains(point_cloud[i].pos))
             continue;
-        unsigned cell_idx = calcGridCellIndex((*point_cloud)[i].pos, cell_range);
+        unsigned cell_idx = calcGridCellIndex(point_cloud[i].pos, cell_range);
         t_grid_elmts[t_num][cell_idx] += 1;
         point_cell_idx[i] = cell_idx;
     }
@@ -190,16 +190,16 @@ void PointCloudGridEncoder::buildPointCloudGrid(std::vector<UncompressedVoxel>* 
 
     // insert compressed points into main grid
 #pragma omp parallel for schedule(static)
-    for(unsigned i=0; i < point_cloud->size(); ++i) {
+    for(unsigned i=0; i < point_cloud.size(); ++i) {
         int t_num = omp_get_thread_num();
-        if (!pc_grid_->bounding_box.contains((*point_cloud)[i].pos))
+        if (!pc_grid_->bounding_box.contains(point_cloud[i].pos))
             continue;
-        Vec<float> pos_cell = mapToCell((*point_cloud)[i].pos, cell_range);
+        Vec<float> pos_cell = mapToCell(point_cloud[i].pos, cell_range);
         unsigned cell_idx = point_cell_idx[i];
         unsigned elmnt_idx = t_curr_elmt[t_num][cell_idx];
         (*pc_grid_)[cell_idx]->points[elmnt_idx] = mapVec(pos_cell, bb_cell,
                                                           settings.grid_precision.point_precision[cell_idx]);
-        (*pc_grid_)[cell_idx]->colors[elmnt_idx] = mapVec((*point_cloud)[i].color_rgba, bb_clr,
+        (*pc_grid_)[cell_idx]->colors[elmnt_idx] = mapVec(point_cloud[i].color_rgba, bb_clr,
                                                           settings.grid_precision.color_precision[cell_idx]);
         t_curr_elmt[t_num][cell_idx] += 1;
     }
