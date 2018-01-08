@@ -163,6 +163,9 @@ void PointCloudGridEncoder::buildPointCloudGrid(const std::vector<UncompressedVo
     std::vector<std::vector<size_t>> t_grid_elmts(max_threads, std::vector<size_t>(num_cells, 0));
     std::vector<unsigned> point_cell_idx(point_cloud.size());
 
+    std::cout << "POINT CLOUD\n";
+    std::cout << "  > size " << point_cloud.size() << std::endl;
+
     // calculate cell indexes for points
     // and number of elements per thread grid cell
 #pragma omp parallel for schedule(static)
