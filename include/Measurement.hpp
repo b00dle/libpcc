@@ -29,7 +29,8 @@ public:
   // PointCloud Analytics Functions
   std::vector<float> meanSquaredErrorPC(PointCloud<Vec<float>, Vec<float>>, PointCloud<Vec<float>, Vec<float>>);
 
-  float colorErrorPC(Vec<float>, Vec<float>);
+  float colorErrorYuv(Vec<float>, Vec<float>);
+  float colorErrorYuvWithoutY(Vec<float>, Vec<float>);
 
 private:
 time_point<system_clock> m_start_time;

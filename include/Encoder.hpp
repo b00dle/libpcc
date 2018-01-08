@@ -38,8 +38,9 @@ public:
         res.z = mapFromBit((uint32_t) from.z, bb.min.z, bb.max.z, bits.z);
         return res;
     };
+
+    static Vec<float> const rgbToYuv(Vec<float> const& rgb);
 };
 
 
 #endif // #ifndef  LIBPCC_ENCODER_HPP
-

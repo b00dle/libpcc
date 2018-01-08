@@ -98,7 +98,7 @@ int main(int argc, char* argv[]){
         std::cout << "  > success: NO\n";
 
     t.startWatch();
-    std::vector<float> results = t.meanSquaredErrorPC(pc, pc3);
+    std::vector<float> results = t.meanSquaredErrorPC(pc, pc2);
     std::cout << "  > MSE " << results[0] << std::endl;
     std::cout << "  > CLR ERROR " << results[1] << std::endl;
     std::cout << "    > took " << t.stopWatch() << "ms" << std::endl;

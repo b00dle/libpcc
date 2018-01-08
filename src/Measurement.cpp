@@ -1,4 +1,5 @@
 #include "../include/Measurement.hpp"
+#include "../include/Encoder.hpp"
 
 Measure::Measure()
   : m_start_time()
@@ -77,7 +78,7 @@ Measure::~Measure()
 
         if(distance_pair < nearest_pair) {
           nearest_pair = distance_pair;
-          color_error = colorErrorPC(p1_data_points_color[p1_index], p2_data_points_color[p2_index]);
+          color_error = colorErrorYuv(p1_data_points_color[p1_index], p2_data_points_color[p2_index]);
         }
       }
       min_distance_list.push_back(nearest_pair);
@@ -99,45 +100,56 @@ Measure::~Measure()
     return data;
   }
 
-  float Measure::colorErrorPC(Vec<float> point1, Vec<float> point2) {
+  float Measure::colorErrorYuv(Vec<float> point1, Vec<float> point2) {
     //Calculate YUV Color values for point1 and point2
     std::cout << "-----------------" << std::endl;
     std::cout << "Original Color Values: " << std::endl;
     std::cout << point1.x << " : " << point1.y << " : " << point1.z << std::endl;
     std::cout << point2.x << " : " << point2.y << " : " << point2.z << std::endl;
-
-    float point1_y = point1.x * 0.299 + point1.y * 0.587 + point1.z * 0.114;
-    float point1_u = (point1.z - point1_y) * 0.493;
-    float point1_v = (point1.x - point1_y) * 0.877;
+    Vec<float> point1_yuv = Encoder::rgbToYuv(point1);
 
     std::cout << std::endl;
     std::cout << "Point 1:" << std::endl;
-    std::cout << point1_y << std::endl;
-    std::cout << point1_u << std::endl;
-    std::cout << point1_v << std::endl;
+    std::cout << point1_yuv.x << std::endl;
+    std::cout << point1_yuv.y << std::endl;
+    std::cout << point1_yuv.z << std::endl;
 
-    float point2_y = point2.x * 0.299 + point2.y * 0.587 + point2.z * 0.114;
-    float point2_u = (point2.z - point2_y) * 0.493;
-    float point2_v = (point2.x - point2_y) * 0.877;
+    Vec<float> point2_yuv = Encoder::rgbToYuv(point2);
 
     std::cout << std::endl;
     std::cout << "Point 2:" << std::endl;
-    std::cout << point2_u << std::endl;
-    std::cout << point2_v << std::endl;
+    std::cout << point2_yuv.x << std::endl;
+    std::cout << point2_yuv.y << std::endl;
+    std::cout << point2_yuv.z << std::endl;
 
-    float color_u = (point1_u - point2_u) * (point1_u - point2_u);
-    float color_v = (point1_v - point2_v) * (point1_v - point2_v);
+    float color_y = (point1_yuv.x - point2_yuv.x) * (point1_yuv.x - point2_yuv.x);
+    float color_u = (point1_yuv.y - point2_yuv.y) * (point1_yuv.y - point2_yuv.y);
+    float color_v = (point1_yuv.z - point2_yuv.z) * (point1_yuv.z - point2_yuv.z);
 
     std::cout << std::endl;
-    std::cout << "Color Difference:" << std::endl;
-    std::cout << color_u << std::endl;
-    std::cout << color_v << std::endl;
+    std::cout << "Color Difference: (by component)" << std::endl;
+    std::cout << sqrt(color_y) << std::endl;
+    std::cout << sqrt(color_u) << std::endl;
+    std::cout << sqrt(color_v) << std::endl;
 
-    float color_deviation = sqrt(color_u + color_v);
+    float color_deviation = sqrt(color_y + color_u + color_v);
 
     std::cout << std::endl;
     std::cout << "Result:" << std::endl;
     std::cout << color_deviation << std::endl;
+
+    return color_deviation;
+  }
+
+  float Measure::colorErrorYuvWithoutY(Vec<float> point1, Vec<float> point2) {
+    //Calculate YUV Color values for point1 and point2
+    Vec<float> point1_yuv = Encoder::rgbToYuv(point1);
+    Vec<float> point2_yuv = Encoder::rgbToYuv(point2);
+
+    float color_u = (point1_yuv.y - point2_yuv.y) * (point1_yuv.y - point2_yuv.y);
+    float color_v = (point1_yuv.z - point2_yuv.z) * (point1_yuv.z - point2_yuv.z);
+
+    float color_deviation = sqrt(color_u + color_v);
 
     return color_deviation;
   }

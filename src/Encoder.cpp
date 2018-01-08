@@ -37,3 +37,12 @@ float Encoder::mapFromBit(uint32_t value, float min, float max, uint8_t bits, fl
         return res;
     }
 }
+
+Vec<float> const Encoder::rgbToYuv(Vec<float> const& rgb) {
+  Vec<float> yuv;
+  yuv.x = rgb.x * 0.299f + rgb.y * 0.587f + rgb.z * 0.114f;
+  yuv.y = (rgb.z - yuv.x) * 0.493f;
+  yuv.z = (rgb.x - yuv.x) * 0.877f;
+
+  return yuv;
+}
