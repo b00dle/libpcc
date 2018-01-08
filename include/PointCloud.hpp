@@ -8,6 +8,17 @@
 
 #include "../include/Vec.hpp"
 #include "../include/BoundingBox.hpp"
+#include "../include/UncompressedVoxel.hpp"
+
+struct UncompressedPointCloud {
+    explicit UncompressedPointCloud(BoundingBox bb=BoundingBox())
+        : data()
+        , bounding_box(bb)
+    {}
+
+    std::vector<UncompressedVoxel> data;
+    BoundingBox bounding_box;
+};
 
 /*
  * Data transfer object for template type precision based PointCloud data.
