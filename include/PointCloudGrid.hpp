@@ -73,8 +73,10 @@ struct PointCloudGrid {
     }
 
     void resize(Vec8 const& t_dimensions) {
-        if(t_dimensions == dimensions)
+        if(t_dimensions == dimensions) {
+            clear();
             return;
+        }
         deleteCells();
         dimensions = t_dimensions;
         initCells();

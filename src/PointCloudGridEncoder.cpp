@@ -32,14 +32,14 @@ zmq::message_t PointCloudGridEncoder::encode(PointCloud<Vec<float>, Vec<float>>*
     return encodePointCloudGrid();
 };
 
-zmq::message_t PointCloudGridEncoder::encode(const std::vector<UncompressedVoxel>& point_cloud)
+zmq::message_t PointCloudGridEncoder::encode(const std::vector<UncompressedVoxel>& point_cloud, int num_points)
 {
     // set properties for parallelization
     omp_set_num_threads(settings.num_threads);
     // Set properties for new grid
     pc_grid_->resize(settings.grid_precision.dimensions);
     pc_grid_->bounding_box = settings.grid_precision.bounding_box;
-    buildPointCloudGrid(point_cloud);
+    buildPointCloudGrid(point_cloud, num_points);
     return encodePointCloudGrid();
 };
 
@@ -139,7 +139,7 @@ void PointCloudGridEncoder::buildPointCloudGrid(PointCloud<Vec<float>, Vec<float
 }
 
 
-void PointCloudGridEncoder::buildPointCloudGrid(const std::vector<UncompressedVoxel>& point_cloud) {
+void PointCloudGridEncoder::buildPointCloudGrid(const std::vector<UncompressedVoxel>& point_cloud, int num_points) {
     Measure t;
     t.startWatch();
 
@@ -165,9 +165,12 @@ void PointCloudGridEncoder::buildPointCloudGrid(const std::vector<UncompressedVo
     std::vector<std::vector<size_t>> t_grid_elmts(max_threads, std::vector<size_t>(num_cells, 0));
     std::vector<unsigned> point_cell_idx(point_cloud.size());
 
+    if(num_points < 0)
+        num_points = point_cloud.size();
+
     if(settings.verbose) {
         std::cout << "POINT CLOUD\n";
-        std::cout << "  > size " << point_cloud.size() << std::endl;
+        std::cout << "  > size " << num_points << std::endl;
     }
 
     // TODO: remove discarded by BB
@@ -175,7 +178,7 @@ void PointCloudGridEncoder::buildPointCloudGrid(const std::vector<UncompressedVo
     // calculate cell indexes for points
     // and number of elements per thread grid cell
 #pragma omp parallel for schedule(static)
-    for(unsigned i=0; i < point_cloud.size(); ++i) {
+    for(unsigned i=0; i < num_points; ++i) {
         int t_num = omp_get_thread_num();
         if (!pc_grid_->bounding_box.contains(point_cloud[i].pos)) {
             discarded_by_bb[t_num] += 1;
@@ -192,7 +195,7 @@ void PointCloudGridEncoder::buildPointCloudGrid(const std::vector<UncompressedVo
     }
 
     std::cout << "POINTS DISCARDED BY BoundingBox " << total_discarded_by_bb << std::endl;
-    std::cout << "  > " << point_cloud.size() - total_discarded_by_bb << " voxels left.\n";
+    std::cout << "  > " << num_points - total_discarded_by_bb << " voxels left.\n";
 
     // resize grid cells based on summing elements per thread grid cell
     // and create offsets of thread grid cell insert into main grid
@@ -209,7 +212,7 @@ void PointCloudGridEncoder::buildPointCloudGrid(const std::vector<UncompressedVo
 
     // insert compressed points into main grid
 #pragma omp parallel for schedule(static)
-    for(unsigned i=0; i < point_cloud.size(); ++i) {
+    for(unsigned i=0; i < num_points; ++i) {
         int t_num = omp_get_thread_num();
         if (!pc_grid_->bounding_box.contains(point_cloud[i].pos))
             continue;
