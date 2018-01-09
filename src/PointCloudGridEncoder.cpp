@@ -169,17 +169,30 @@ void PointCloudGridEncoder::buildPointCloudGrid(const std::vector<UncompressedVo
         std::cout << "POINT CLOUD\n";
         std::cout << "  > size " << point_cloud.size() << std::endl;
     }
+
+    // TODO: remove discarded by BB
+    std::vector<int> discarded_by_bb(max_threads, 0);
     // calculate cell indexes for points
     // and number of elements per thread grid cell
 #pragma omp parallel for schedule(static)
     for(unsigned i=0; i < point_cloud.size(); ++i) {
         int t_num = omp_get_thread_num();
-        if (!pc_grid_->bounding_box.contains(point_cloud[i].pos))
+        if (!pc_grid_->bounding_box.contains(point_cloud[i].pos)) {
+            discarded_by_bb[t_num] += 1;
             continue;
+        }
         unsigned cell_idx = calcGridCellIndex(point_cloud[i].pos, cell_range);
         t_grid_elmts[t_num][cell_idx] += 1;
         point_cell_idx[i] = cell_idx;
     }
+
+    int total_discarded_by_bb = 0;
+    for(auto disc_bb : discarded_by_bb) {
+        total_discarded_by_bb += disc_bb;
+    }
+
+    std::cout << "POINTS DISCARDED BY BoundingBox " << total_discarded_by_bb << std::endl;
+    std::cout << "  > " << point_cloud.size() - total_discarded_by_bb << " voxels left.\n";
 
     // resize grid cells based on summing elements per thread grid cell
     // and create offsets of thread grid cell insert into main grid
@@ -381,10 +394,10 @@ bool PointCloudGridEncoder::extractPointCloudFromGrid(std::vector<UncompressedVo
             (*point_cloud)[point_idx[cell_idx][j]].pos[0] = pos_cell.x;
             (*point_cloud)[point_idx[cell_idx][j]].pos[1] = pos_cell.y;
             (*point_cloud)[point_idx[cell_idx][j]].pos[2] = pos_cell.z;
-            (*point_cloud)[point_idx[cell_idx][j]].color_rgba[0] = (unsigned char) clr.x;
-            (*point_cloud)[point_idx[cell_idx][j]].color_rgba[1] = (unsigned char) clr.y;
-            (*point_cloud)[point_idx[cell_idx][j]].color_rgba[2] = (unsigned char) clr.z;
-            (*point_cloud)[point_idx[cell_idx][j]].color_rgba[3] = 255;
+            (*point_cloud)[point_idx[cell_idx][j]].color_rgba[0] = 255;
+            (*point_cloud)[point_idx[cell_idx][j]].color_rgba[1] = (unsigned char) clr.x;
+            (*point_cloud)[point_idx[cell_idx][j]].color_rgba[2] = (unsigned char) clr.y;
+            (*point_cloud)[point_idx[cell_idx][j]].color_rgba[3] = (unsigned char) clr.z;
         }
     }
 

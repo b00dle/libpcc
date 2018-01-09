@@ -1,6 +1,7 @@
 #include "../include/BinaryFile.hpp"
 
 #include <fstream>
+#include <iostream>
 
 BinaryFile::BinaryFile()
     : data_(nullptr)
@@ -83,6 +84,9 @@ bool BinaryFile::read(const std::string &file_path, char *&data, long &size)
 
     if(size == -1)
         return false;
+
+    delete [] data;
+    data = new char[size];
 
     file.read(reinterpret_cast<char*>(data), size);
 

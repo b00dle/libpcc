@@ -22,6 +22,108 @@ int main(int argc, char* argv[]){
     std::string endpoint("tcp://" + socket_name);
     socket.bind(endpoint.c_str());
     */
+
+    // ENCODER STUP
+    PointCloudGridEncoder encoder;
+    // settings should match './grid_log_info.txt'
+    BoundingBox bb(Vec<float>(-1.0f,0.05f,-1.0f), Vec<float>(1.0f,2.2f,1.0f));
+    encoder.settings.grid_precision = GridPrecisionDescriptor(
+            Vec8(8,8,8), // dimensions
+            bb,
+            Vec<BitCount>(BIT_4,BIT_4,BIT_4), // default point encoding
+            Vec<BitCount>(BIT_8,BIT_8,BIT_8)  // default color encoding
+    );
+
+    // READ RAW DATA FROM FILE
+    std::vector<UncompressedVoxel> v_raw;
+    BinaryFile raw;
+    if(raw.read("./voxel_log.txt")) {
+        v_raw.resize(raw.getSize() / sizeof(UncompressedVoxel));
+        raw.copy((char*) v_raw.data());
+        std::cout << "READ raw voxels from file done.\n";
+    }
+    else {
+        std::cout << "READ raw voxels from file failed.\n";
+    }
+    std::cout << "RAW VOXEL data (parsed from file) \n";
+    std::cout << "  > voxel count " << v_raw.size() << std::endl;
+
+    float avg_clr[4] = {0.0f,0.0f,0.0f,0.0f};
+    float avg_pos[3] = {0.0f,0.0f,0.0f};
+    int skipped = 0;
+    for(auto voxel:v_raw) {
+        avg_clr[0] += (static_cast<float>(voxel.color_rgba[0]));
+        avg_clr[1] += (static_cast<float>(voxel.color_rgba[1]));
+        avg_clr[2] += (static_cast<float>(voxel.color_rgba[2]));
+        avg_clr[3] += (static_cast<float>(voxel.color_rgba[3]));
+        if(bb.contains(voxel.pos)) {
+            avg_pos[0] += voxel.pos[0];
+            avg_pos[1] += voxel.pos[1];
+            avg_pos[2] += voxel.pos[2];
+        }
+        else {
+            ++skipped;
+        }
+    }
+    avg_clr[0] /= v_raw.size();
+    avg_clr[1] /= v_raw.size();
+    avg_clr[2] /= v_raw.size();
+    avg_clr[3] /= v_raw.size();
+    avg_pos[0] /= (v_raw.size() - skipped);
+    avg_pos[1] /= (v_raw.size() - skipped);
+    avg_pos[2] /= (v_raw.size() - skipped);
+
+    std::cout << "  > avg color "
+              << avg_clr[0] << ","
+              << avg_clr[1] << ","
+              << avg_clr[2] << ","
+              << avg_clr[3] << std::endl;
+    std::cout << "  > avg pos "
+              << avg_pos[0] << ","
+              << avg_pos[1] << ","
+              << avg_pos[2] << std::endl;
+
+    zmq::message_t msg_v_raw = encoder.encode(v_raw);
+    std::vector<UncompressedVoxel> msg_v_raw_decoded;
+    encoder.decode(msg_v_raw, &msg_v_raw_decoded);
+    std::cout << "DECODED message (encoded using raw voxels)\n";
+    std::cout << "  > voxel count " << msg_v_raw_decoded.size() << std::endl;
+
+    avg_clr[0] = 0.0f;
+    avg_clr[1] = 0.0f;
+    avg_clr[2] = 0.0f;
+    avg_clr[3] = 0.0f;
+    avg_pos[0] = 0.0f;
+    avg_pos[1] = 0.0f;
+    avg_pos[2] = 0.0f;
+    for(auto voxel:msg_v_raw_decoded) {
+        avg_clr[0] += (static_cast<float>(voxel.color_rgba[0]));
+        avg_clr[1] += (static_cast<float>(voxel.color_rgba[1]));
+        avg_clr[2] += (static_cast<float>(voxel.color_rgba[2]));
+        avg_clr[3] += (static_cast<float>(voxel.color_rgba[3]));
+        avg_pos[0] += voxel.pos[0];
+        avg_pos[1] += voxel.pos[1];
+        avg_pos[2] += voxel.pos[2];
+    }
+    avg_clr[0] /= msg_v_raw_decoded.size();
+    avg_clr[1] /= msg_v_raw_decoded.size();
+    avg_clr[2] /= msg_v_raw_decoded.size();
+    avg_clr[3] /= msg_v_raw_decoded.size();
+    avg_pos[0] /= msg_v_raw_decoded.size();
+    avg_pos[1] /= msg_v_raw_decoded.size();
+    avg_pos[2] /= msg_v_raw_decoded.size();
+
+    std::cout << "  > avg color "
+              << avg_clr[0] << ","
+              << avg_clr[1] << ","
+              << avg_clr[2] << ","
+              << avg_clr[3] << std::endl;
+    std::cout << "  > avg pos "
+              << avg_pos[0] << ","
+              << avg_pos[1] << ","
+              << avg_pos[2] << std::endl;
+
+    /*
     Measure t;
 
     PointCloud<Vec<float>, Vec<float>> pc(BoundingBox(Vec<float>(-1.01f,-1.01f,-1.01f), Vec<float>(1.01f,1.01f,1.01f)));
@@ -68,6 +170,7 @@ int main(int argc, char* argv[]){
     std::cout << "  > Message Size\n"
               << "    > bytes " << size_bytes << "\n"
               << "    > mbit " << mbit << "\n";
+    */
 
     //// TESTING FILE READ/WRITE
 
@@ -89,17 +192,19 @@ int main(int argc, char* argv[]){
     */
 
     //// DECODING
-
+    /*
     PointCloud<Vec<float>, Vec<float>> pc2;
+    std::vector<UncompressedVoxel> pc_vec2;
     t.startWatch();
     //zmq::message_t msg2 = f.get();
-    bool success = encoder.decode(msg, &pc2);
+    bool success = encoder.decode(msg, &pc_vec2);
     std::cout << "DECODING DONE in " << t.stopWatch() << "ms.\n";
-    std::cout << "  > size " << pc2.size() << "\n";
+    std::cout << "  > size " << pc_vec2.size() << "\n";
     if(success)
         std::cout << "  > success: YES\n";
     else
         std::cout << "  > success: NO\n";
+    */
 
     /*
     t.startWatch();
