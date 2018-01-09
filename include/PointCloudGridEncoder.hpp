@@ -30,11 +30,13 @@ public:
         EncodingSettings()
             : grid_precision()
             , num_threads(24)
+            , verbose(false)
         {}
 
         EncodingSettings(const EncodingSettings&) = default;
 
         GridPrecisionDescriptor grid_precision;
+        bool verbose;
         int num_threads;
     };
 

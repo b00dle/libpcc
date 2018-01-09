@@ -130,10 +130,12 @@ void PointCloudGridEncoder::buildPointCloudGrid(PointCloud<Vec<float>, Vec<float
 
     time_t fill_grid = t.stopWatch();
 
-    std::cout << "DONE building grid\n";
-    std::cout << "  > took " << fill_grid << "ms.\n";
-    std::cout << "    > offset calculation " << calc_offset << "ms.\n";
-    std::cout << "    > filling grid " << fill_grid - calc_offset << "ms.\n";
+    if(settings.verbose) {
+        std::cout << "DONE building grid\n";
+        std::cout << "  > took " << fill_grid << "ms.\n";
+        std::cout << "    > offset calculation " << calc_offset << "ms.\n";
+        std::cout << "    > filling grid " << fill_grid - calc_offset << "ms.\n";
+    }
 }
 
 
@@ -163,9 +165,10 @@ void PointCloudGridEncoder::buildPointCloudGrid(const std::vector<UncompressedVo
     std::vector<std::vector<size_t>> t_grid_elmts(max_threads, std::vector<size_t>(num_cells, 0));
     std::vector<unsigned> point_cell_idx(point_cloud.size());
 
-    std::cout << "POINT CLOUD\n";
-    std::cout << "  > size " << point_cloud.size() << std::endl;
-
+    if(settings.verbose) {
+        std::cout << "POINT CLOUD\n";
+        std::cout << "  > size " << point_cloud.size() << std::endl;
+    }
     // calculate cell indexes for points
     // and number of elements per thread grid cell
 #pragma omp parallel for schedule(static)
@@ -209,10 +212,12 @@ void PointCloudGridEncoder::buildPointCloudGrid(const std::vector<UncompressedVo
 
     time_t fill_grid = t.stopWatch();
 
-    std::cout << "DONE building grid\n";
-    std::cout << "  > took " << fill_grid << "ms.\n";
-    std::cout << "    > offset calculation " << calc_offset << "ms.\n";
-    std::cout << "    > filling grid " << fill_grid - calc_offset << "ms.\n";
+    if(settings.verbose) {
+        std::cout << "DONE building grid\n";
+        std::cout << "  > took " << fill_grid << "ms.\n";
+        std::cout << "    > offset calculation " << calc_offset << "ms.\n";
+        std::cout << "    > filling grid " << fill_grid - calc_offset << "ms.\n";
+    }
 }
 
 bool PointCloudGridEncoder::extractPointCloudFromGrid(PointCloud<Vec<float>, Vec<float>>* point_cloud)
@@ -292,8 +297,10 @@ bool PointCloudGridEncoder::extractPointCloudFromGrid(PointCloud<Vec<float>, Vec
         }
     }
 
-    std::cout << "DECOMPRESSION done.\n";
-    std::cout << "  > took " << m.stopWatch() << "ms.\n";
+    if(settings.verbose) {
+        std::cout << "DECOMPRESSION done.\n";
+        std::cout << "  > took " << m.stopWatch() << "ms.\n";
+    }
 
     return true;//point_idx == point_cloud->size();
 }
@@ -381,8 +388,10 @@ bool PointCloudGridEncoder::extractPointCloudFromGrid(std::vector<UncompressedVo
         }
     }
 
-    std::cout << "DECOMPRESSION done.\n";
-    std::cout << "  > took " << m.stopWatch() << "ms.\n";
+    if(settings.verbose) {
+        std::cout << "DECOMPRESSION done.\n";
+        std::cout << "  > took " << m.stopWatch() << "ms.\n";
+    }
 
     return true;//point_idx == point_cloud->size();
 }
@@ -470,11 +479,12 @@ zmq::message_t PointCloudGridEncoder::encodePointCloudGrid() {
 
     time_t post_cells = m.stopWatch();
 
-    std::cout << "ENCODING done.\n";
-    std::cout << "  > took " << post_cells << "ms.\n";
-    std::cout << "    > pre-encode cells " << pre_cells << "ms.\n";
-    std::cout << "    > encode cells " << post_cells-pre_cells << "ms.\n";
-
+    if(settings.verbose) {
+        std::cout << "ENCODING done.\n";
+        std::cout << "  > took " << post_cells << "ms.\n";
+        std::cout << "    > pre-encode cells " << pre_cells << "ms.\n";
+        std::cout << "    > encode cells " << post_cells-pre_cells << "ms.\n";
+    }
     return message;
 }
 
@@ -557,8 +567,9 @@ bool PointCloudGridEncoder::decodePointCloudGrid(zmq::message_t& msg)
 
     # pragma omp parallel for
     for(header_idx = 0; header_idx < cell_headers.size(); ++header_idx) {
-        if(cell_offsets[header_idx] == decodeCell(msg, cell_headers[header_idx], cell_offsets[header_idx]))
+        if(cell_offsets[header_idx] == decodeCell(msg, cell_headers[header_idx], cell_offsets[header_idx])) {
             std::cout << "WARNING: No points in cell\n  > Cell should've been blacklisted.\n";
+        }
     }
 
     while(!cell_headers.empty()) {
@@ -568,9 +579,11 @@ bool PointCloudGridEncoder::decodePointCloudGrid(zmq::message_t& msg)
 
     time_t post_cell_decode = t.stopWatch();
 
-    std::cout << "DECODING CELLS done.\n  > took " << post_cell_decode << "ms.\n";
-    std::cout << "    > decode headers " << pre_cell_decode << "ms.\n";
-    std::cout << "    > decode cells " << post_cell_decode-pre_cell_decode << "ms.\n";
+    if(settings.verbose) {
+        std::cout << "DECODING CELLS done.\n  > took " << post_cell_decode << "ms.\n";
+        std::cout << "    > decode headers " << pre_cell_decode << "ms.\n";
+        std::cout << "    > decode cells " << post_cell_decode-pre_cell_decode << "ms.\n";
+    }
 
     return true;
 }
@@ -853,13 +866,11 @@ const Vec<float> PointCloudGridEncoder::mapToCell(const float pos[3], const Vec<
 
 size_t PointCloudGridEncoder::calcMessageSize(const std::vector<CellHeader *> & cell_headers) const {
     size_t header_size = GlobalHeader::getByteSize();
-    std::cout << "HEADER SIZE (bytes) " << header_size << std::endl;
     // header size
     size_t message_size = header_size;
     // blacklist size
     size_t blacklist_size = header_->num_blacklist*sizeof(unsigned);
     message_size += blacklist_size;
-    std::cout << "BLACKLIST SIZE (bytes) " << blacklist_size << std::endl;
     if(cell_headers.empty())
         return message_size;
     // size of one cell header
@@ -883,8 +894,14 @@ size_t PointCloudGridEncoder::calcMessageSize(const std::vector<CellHeader *> & 
                 c_header->color_encoding_z
         );
     }
-    std::cout << "CELLS\n";
-    std::cout << " > ELEMENT COUNT " << num_elements << std::endl;
+
+    if(settings.verbose) {
+        std::cout << "HEADER SIZE (bytes) " << header_size << std::endl;
+        std::cout << "BLACKLIST SIZE (bytes) " << blacklist_size << std::endl;
+        std::cout << "CELLS\n";
+        std::cout << " > ELEMENT COUNT " << num_elements << std::endl;
+    }
+    
     return message_size;
 }
 
