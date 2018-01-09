@@ -24,9 +24,13 @@ public:
      * Results is returned as unsigned long to make sure values fit.
      */
     static const Vec<uint64_t> mapVec(const Vec<float>& from, BoundingBox const& bb, const Vec<uint8_t>& bits);
+    static const Vec<uint64_t> mapVec(const unsigned char from[4], BoundingBox const& bb, const Vec<uint8_t>& bits);
     static const Vec<uint64_t> mapVec(const Vec<float>& from, BoundingBox const& bb, const Vec<BitCount>& bits);
+    static const Vec<uint64_t> mapVec(const unsigned char from[4], BoundingBox const& bb, const Vec<BitCount>& bits);
     static const Vec<float> mapVecToFloat(const Vec<uint64_t>& from, BoundingBox const& bb, const Vec<uint8_t>& bits);
+    static const Vec<float> mapVecToFloat(const unsigned char from[4], BoundingBox const& bb, const Vec<uint8_t>& bits);
     static const Vec<float> mapVecToFloat(const Vec<uint64_t>& from, BoundingBox const& bb, const Vec<BitCount>& bits);
+    static const Vec<float> mapVecToFloat(const unsigned char from[4], BoundingBox const& bb, const Vec<BitCount>& bits);
 };
 
 

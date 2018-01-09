@@ -30,11 +30,13 @@ public:
         EncodingSettings()
             : grid_precision()
             , num_threads(24)
+            , verbose(false)
         {}
 
         EncodingSettings(const EncodingSettings&) = default;
 
         GridPrecisionDescriptor grid_precision;
+        bool verbose;
         int num_threads;
     };
 
@@ -106,22 +108,28 @@ private:
     };
 
 public:
-    PointCloudGridEncoder(const EncodingSettings& s = EncodingSettings());
-    virtual ~PointCloudGridEncoder();
+    explicit PointCloudGridEncoder(const EncodingSettings& s = EncodingSettings());
+    ~PointCloudGridEncoder();
 
-    /*
-     * Compresses given PointCloud and creates message from it.
-     * M_P and M_C are the maximum precision used to
-     * encode components of position (M_P) and color (M_C) in bits.
-    */
+    /* Compresses given PointCloud and creates message from it. */
     zmq::message_t encode(PointCloud<Vec<float>, Vec<float>>* point_cloud);
+    /* Compresses given UncompressedPointCloud and creates message from it.
+       Optionally num_points specifies how many UncompressedVoxels in point_cloud
+       will be encoded range [0,num_points-1]. If num_points < 0 all points will be
+       considered. */
+    zmq::message_t encode(const std::vector<UncompressedVoxel>& point_cloud, int num_points=-1);
 
     /* Decodes given message into point_cloud. Returns success. */
     bool decode(zmq::message_t& msg, PointCloud<Vec<float>, Vec<float>>* point_cloud);
+    /* Decodes given message into point_cloud. Returns success. */
+    bool decode(zmq::message_t& msg, std::vector<UncompressedVoxel>* point_cloud);
 
 private:
     /* Fills pc_grid_ from given point_cloud and settings */
     void buildPointCloudGrid(PointCloud<Vec<float>, Vec<float>>* point_cloud);
+
+    /* Fills pc_grid_ from given point_cloud and settings */
+    void buildPointCloudGrid(const std::vector<UncompressedVoxel>& point_cloud, int num_points);
 
     /*
      * Extracts a PointCloud from pc_grid_.
@@ -129,6 +137,13 @@ private:
      * Returns success of operation.
     */
     bool extractPointCloudFromGrid(PointCloud<Vec<float>, Vec<float>>* point_cloud);
+
+    /*
+     * Extracts a PointCloud from pc_grid_.
+     * Results are stored in pc parameter.
+     * Returns success of operation.
+    */
+    bool extractPointCloudFromGrid(std::vector<UncompressedVoxel>* point_cloud);
 
     /* Creates a zmq message from current point_cloud grid */
     zmq::message_t encodePointCloudGrid();
@@ -195,8 +210,14 @@ private:
     /* Calculates the index of the cell a point belongs to */
     unsigned calcGridCellIndex(const Vec<float>& pos, const Vec<float>& cell_range) const;
 
+    /* Calculates the index of the cell a point belongs to */
+    unsigned calcGridCellIndex(const float pos[3], const Vec<float>& cell_range) const;
+
     /* Maps a global position into local cell coordinates. */
     const Vec<float> mapToCell(const Vec<float>& pos, const Vec<float>& cell_range);
+
+    /* Maps a global position into local cell coordinates. */
+    const Vec<float> mapToCell(const float pos[3], const Vec<float>& cell_range);
 
     /* Calculates the overall message size in bytes */
     size_t calcMessageSize(const std::vector<CellHeader*>&) const;
