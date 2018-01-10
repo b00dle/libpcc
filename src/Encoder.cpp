@@ -1,5 +1,6 @@
 #include "../include/Encoder.hpp"
 #include <cassert>
+#include <iostream>
 
 float Encoder::mapToRange(float value, float min, float max, float range_max)
 {
@@ -47,12 +48,32 @@ Vec<float> const Encoder::rgbToYuv(Vec<float> const& rgb) {
   return yuv;
 }
 
-Vec<float> const Encoder::rgbToXyz(Vec<float> const& rgb) {
+Vec<float> const Encoder::rgbToXyz(Vec<float> rgb) {
   Vec<float> xyz;
 
+  if(rgb.x > 0.04045f) {
+    rgb.x = pow(((rgb.x + 0.055f) / 1.055f), 2.4f);
+  } else {
+    rgb.x = rgb.x / 12.92f;
+  }
+  if(rgb.y > 0.04045f) {
+    rgb.y = pow(((rgb.y + 0.055f) / 1.055f), 2.4f);
+  } else {
+    rgb.y = rgb.y / 12.92f;
+  }
+  if(rgb.z > 0.04045f) {
+    rgb.z = pow(((rgb.z + 0.055f) / 1.055f), 2.4f);
+  } else {
+    rgb.z = rgb.z / 12.92f;
+  }
+
+  rgb.x = rgb.x * 100.0f;
+  rgb.y = rgb.y * 100.0f;
+  rgb.z = rgb.z * 100.0f;
+
   xyz.x = rgb.x * 0.4124564f + rgb.y * 0.3575761f + rgb.z * 0.1804375f;
-  xyz.y = rgb.x * 0.4124564f + rgb.y * 0.3575761f + rgb.z * 0.1804375f;
-  xyz.z = rgb.x * 0.4124564f + rgb.y * 0.3575761f + rgb.z * 0.1804375f;
+  xyz.y = rgb.x * 0.2126729f + rgb.y * 0.7151522f + rgb.z * 0.0721750f;
+  xyz.z = rgb.x * 0.0193339f + rgb.y * 0.1191920f + rgb.z * 0.9503041f;
 
   return xyz;
 }
@@ -60,14 +81,20 @@ Vec<float> const Encoder::rgbToXyz(Vec<float> const& rgb) {
 Vec<float> const Encoder::rgbToCieLab(Vec<float> const& rgb) {
   Vec<float> lab;
   Vec<float> xyz = rgbToXyz(rgb);
-  Vec<float> XYZ_D50_2 = [96.422f, 100f, 82.521f]; //D50 Standard; 2° ViewAngle
-  Vec<float> XYZ_D65_2 = [95.047f, 100f, 108.883f];
-  Vec<float> XYZ_D50_10 = [96.720f, 100f, 81.427f];
-  Vec<float> XYZ_D65_10 = [94.811f, 100f, 107.304f];
+  std::cout << "#########################################LAB-XYZ" << std::endl;
+  std::cout << xyz.x << " " << xyz.y << " " << xyz.z << std::endl;
 
-  lab.x = 116.0f * pow((xyz.y / XYZ_D65_2.y), (1/3)) - 16;
-  lab.y = 500.0f * (pow((xyz.x / XYZ_D65_2.x), (1/3)) - pow((xyz.y / XYZ_D65_2.y), (1/3)));
-  lab.z = 200.0f * (pow((xyz.y / XYZ_D65_2.y), (1/3)) - pow((xyz.z / XYZ_D65_2.z), (1/3)));
+  Vec<float> XYZ_D50_2 = Vec<float>(96.422f, 100.0f, 82.521f); //D50 Standard; 2° ViewAngle
+  Vec<float> XYZ_D65_2 = Vec<float>(95.047f, 100.0f, 108.883f);
+  Vec<float> XYZ_D50_10 = Vec<float>(96.720f, 100.0f, 81.427f);
+  Vec<float> XYZ_D65_10 = Vec<float>(94.811f, 100.0f, 107.304f);
+
+  lab.x = 116.0f * cbrt(xyz.y / XYZ_D65_2.y) - 16;
+  lab.y = 500.0f * (cbrt(xyz.x / XYZ_D65_2.x) - cbrt(xyz.y / XYZ_D65_2.y));
+  lab.z = 200.0f * (cbrt(xyz.y / XYZ_D65_2.y) - cbrt(xyz.z / XYZ_D65_2.z));
+
+  std::cout << "#########################################CIE-LAB" << std::endl;
+  std::cout << lab.x << " " << lab.y << " " << lab.z << std::endl;
 
   return lab;
 }

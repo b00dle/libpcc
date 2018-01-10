@@ -41,7 +41,7 @@ public:
     // Color Conversion to YUV standard
     static Vec<float> const rgbToYuv(Vec<float> const& rgb);
     // Color Conversion to CIE - XYZ standard
-    static Vec<float> const rgbToXyz(Vec<float> const& rgb);
+    static Vec<float> const rgbToXyz(Vec<float> rgb);
     // Color Conversion to CIE LAB standard
     static Vec<float> const rgbToCieLab(Vec<float> const& rgb);
 };

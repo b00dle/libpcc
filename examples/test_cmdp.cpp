@@ -43,6 +43,23 @@ int main(int argc, char* argv[]){
             }
         }
     }
+    PointCloud<Vec<float>, Vec<float>> pc4(BoundingBox(Vec<float>(-1.01f,-1.01f,-1.01f), Vec<float>(1.01f,1.01f,1.01f)));
+    pc4.points.emplace_back(1.0f,1.0f,1.0f);
+    pc4.points.emplace_back(1.0f,1.0f,0.0f);
+    pc4.points.emplace_back(1.0f,0.0f,0.0f);
+    pc4.colors.emplace_back(0.5f,0.5f,0.5f);
+    pc4.colors.emplace_back(0.5f,0.5f,0.5f);
+    pc4.colors.emplace_back(0.5f,0.5f,0.5f);
+
+    PointCloud<Vec<float>, Vec<float>> pc5(BoundingBox(Vec<float>(-1.01f,-1.01f,-1.01f), Vec<float>(1.01f,1.01f,1.01f)));
+    pc5.points.emplace_back(1.0f,1.0f,1.2f);
+    pc5.points.emplace_back(1.0f,1.0f,0.4f);
+    pc5.points.emplace_back(0.2f,0.0f,0.0f);
+    pc5.colors.emplace_back(0.5f,0.5f,0.5f);
+    pc5.colors.emplace_back(0.5f,0.5f,0.5f);
+    pc5.colors.emplace_back(0.45f,0.5f,0.5f);
+
+
 
     std::cout << "POINT CLOUD" << std::endl;
     std::cout << "  > size " << pc.size() << "\n";
@@ -98,10 +115,12 @@ int main(int argc, char* argv[]){
         std::cout << "  > success: NO\n";
 
     t.startWatch();
-    std::vector<float> results = t.meanSquaredErrorPC(pc, pc2);
-    std::cout << "  > MSE " << results[0] << std::endl;
-    std::cout << "  > CLR ERROR " << results[1] << std::endl;
-    std::cout << "    > took " << t.stopWatch() << "ms" << std::endl;
+    std::vector<float> results = t.comparePC(pc4, pc5);
+    t.printResultsPC(results);
+
+    // std::cout << "  > MSE " << results[0] << std::endl;
+    // std::cout << "  > CLR ERROR " << results[1] << std::endl;
+    // std::cout << "    > took " << t.stopWatch() << "ms" << std::endl;
 
     /*
     unsigned tick = 0;

@@ -50,7 +50,7 @@ Measure::~Measure()
 
 
   //Calculate Mean Squared Error between two PointClouds
-  std::vector<float> Measure::meanSquaredErrorPC(PointCloud<Vec<float>, Vec<float>> p1, PointCloud<Vec<float>, Vec<float>> p2) {
+  std::vector<float> Measure::comparePC(PointCloud<Vec<float>, Vec<float>> p1, PointCloud<Vec<float>, Vec<float>> p2) {
     std::vector<Vec<float>> p1_data_points = p1.points;
     std::vector<Vec<float>> p2_data_points = p2.points;
     std::vector<Vec<float>> p1_data_points_color = p1.colors;
@@ -62,6 +62,8 @@ Measure::~Measure()
     std::list<float> color_error_list;
     std::vector<float> data;
     float avg_error = 0;
+    float variance = 0;
+    float max_error = 0;
     float color_error = 0;
     float avg_color_error = 0;
 
@@ -78,7 +80,7 @@ Measure::~Measure()
 
         if(distance_pair < nearest_pair) {
           nearest_pair = distance_pair;
-          color_error = colorErrorYuv(p1_data_points_color[p1_index], p2_data_points_color[p2_index]);
+          color_error = colorErrorCielab(p1_data_points_color[p1_index], p2_data_points_color[p2_index]);
         }
       }
       min_distance_list.push_back(nearest_pair);
@@ -86,6 +88,9 @@ Measure::~Measure()
     }
     for(auto const& l : min_distance_list) {
       avg_error += l;
+      if(max_error < l) {
+        max_error = l;
+      }
     }
     for(auto const& k : color_error_list) {
       avg_color_error += k;
@@ -93,11 +98,23 @@ Measure::~Measure()
 
     avg_error = avg_error / min_distance_list.size();
     avg_color_error = avg_color_error / color_error_list.size();
+    variance = calcVariance(min_distance_list);
+    std::cout << variance << std::endl;
 
     data.push_back(avg_error);
+    data.push_back(variance);
+    data.push_back(max_error);
     data.push_back(avg_color_error);
 
     return data;
+  }
+
+  void Measure::printResultsPC(std::vector<float> results) {
+    std::cout << "PC Differences " << std::endl;
+    std::cout << "  > avg error " << results[0] << std::endl;
+    std::cout << "  > variance " << results[1] << std::endl;
+    std::cout << "  > max error " << results[2] << std::endl;
+    std::cout << "  > avg color error " << results[3] << std::endl;
   }
 
   float Measure::colorErrorYuv(Vec<float> point1, Vec<float> point2) {
@@ -163,15 +180,24 @@ Measure::~Measure()
     float color_y = (point1_lab.y - point2_lab.y) * (point1_lab.y - point2_lab.y);
     float color_z = (point1_lab.z - point2_lab.z) * (point1_lab.z - point2_lab.z);
 
-    float color_deviation = sqrt(color_L + color_a + color_b);
+    float color_deviation = sqrt(color_x + color_y + color_z);
 
     return color_deviation;
   }
 
   float Measure::colorErrorCielab(Vec<float> point1, Vec<float> point2) {
     //Calculate YUV Color values for point1 and point2
+    std::cout << "---------------------------------RGB" << std::endl;
+    std::cout << point1.x << " " << point1.y << " " << point1.z << std::endl;
+    std::cout << point2.x << " " << point2.y << " " << point2.z << std::endl;
+
     Vec<float> point1_lab = Encoder::rgbToCieLab(point1);
     Vec<float> point2_lab = Encoder::rgbToCieLab(point2);
+
+    std::cout << "---------------------------------CIELAB" << std::endl;
+    std::cout << point1_lab.x << " " << point1_lab.y << " " << point1_lab.z << std::endl;
+    std::cout << point2_lab.x << " " << point2_lab.y << " " << point2_lab.z << std::endl;
+
 
     float color_L = (point1_lab.x - point2_lab.x) * (point1_lab.x - point2_lab.x);
     float color_a = (point1_lab.y - point2_lab.y) * (point1_lab.y - point2_lab.y);
@@ -180,4 +206,19 @@ Measure::~Measure()
     float color_deviation = sqrt(color_L + color_a + color_b);
 
     return color_deviation;
+  }
+
+  float Measure::calcVariance(std::list<float> values) {
+    float avg_error = 0;
+    float variance = 0;
+
+    for(auto const& l : values) {
+      avg_error += l;
+    }
+    avg_error = avg_error / values.size();
+
+    for(auto const& l : values) {
+      variance +=  (l - avg_error) * (l - avg_error);
+    }
+    return variance = variance / values.size();
   }
