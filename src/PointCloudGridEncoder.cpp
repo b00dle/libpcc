@@ -1,6 +1,9 @@
 #include "../include/PointCloudGridEncoder.hpp"
 
 #include <set>
+#include <omp.h>
+
+#include "../include/Measurement.hpp"
 
 PointCloudGridEncoder::PointCloudGridEncoder(const EncodingSettings& s)
     : Encoder()
@@ -20,49 +23,217 @@ PointCloudGridEncoder::~PointCloudGridEncoder()
 
 zmq::message_t PointCloudGridEncoder::encode(PointCloud<Vec<float>, Vec<float>>* point_cloud)
 {
+    // set properties for parallelization
+    omp_set_num_threads(settings.num_threads);
     // Set properties for new grid
-    pc_grid_->resize(settings.grid_dimensions);
+    pc_grid_->resize(settings.grid_precision.dimensions);
     pc_grid_->bounding_box = point_cloud->bounding_box;
-    buildPointCloudGrid(point_cloud, settings.point_precision, settings.color_precision);
+    buildPointCloudGrid(point_cloud);
+    return encodePointCloudGrid();
+};
+
+zmq::message_t PointCloudGridEncoder::encode(const std::vector<UncompressedVoxel>& point_cloud, int num_points)
+{
+    // set properties for parallelization
+    omp_set_num_threads(settings.num_threads);
+    // Set properties for new grid
+    pc_grid_->resize(settings.grid_precision.dimensions);
+    pc_grid_->bounding_box = settings.grid_precision.bounding_box;
+    buildPointCloudGrid(point_cloud, num_points);
     return encodePointCloudGrid();
 };
 
 bool PointCloudGridEncoder::decode(zmq::message_t &msg, PointCloud<Vec<float>, Vec<float>> *point_cloud)
 {
+    // set properties for parallelization
+    omp_set_num_threads(settings.num_threads);
     if(!decodePointCloudGrid(msg))
         return false;
-    std::cout << "DECODE GRID done\n";
     return extractPointCloudFromGrid(point_cloud);
 }
 
-void PointCloudGridEncoder::buildPointCloudGrid(PointCloud<Vec<float>, Vec<float>>* point_cloud, const Vec<BitCount>& M_P, const Vec<BitCount>& M_C) {
+bool PointCloudGridEncoder::decode(zmq::message_t &msg, std::vector<UncompressedVoxel>* point_cloud)
+{
+    // set properties for parallelization
+    omp_set_num_threads(settings.num_threads);
+    if(!decodePointCloudGrid(msg))
+        return false;
+    return extractPointCloudFromGrid(point_cloud);
+}
+
+void PointCloudGridEncoder::buildPointCloudGrid(PointCloud<Vec<float>, Vec<float>>* point_cloud) {
+    Measure t;
+    t.startWatch();
+
     // init all cells to default BitCount
-    for(auto c : pc_grid_->cells) {
-        c->initPoints(M_P.x, M_P.y, M_P.z);
-        c->initColors(M_C.x, M_C.y, M_C.z);
+    for(unsigned cell_idx = 0; cell_idx < pc_grid_->cells.size(); ++cell_idx) {
+        Vec<BitCount> M_P = settings.grid_precision.point_precision[cell_idx];
+        Vec<BitCount> M_C = settings.grid_precision.color_precision[cell_idx];
+        pc_grid_->cells[cell_idx]->initPoints(M_P.x, M_P.y, M_P.z);
+        pc_grid_->cells[cell_idx]->initColors(M_C.x, M_C.y, M_C.z);
     }
+
     Vec<float> cell_range = pc_grid_->bounding_box.calcRange();
-    Vec<float> pos_cell;
     cell_range.x /= (float) pc_grid_->dimensions.x;
     cell_range.y /= (float) pc_grid_->dimensions.y;
     cell_range.z /= (float) pc_grid_->dimensions.z;
     BoundingBox bb_cell(Vec<float>(0.0f,0.0f,0.0f), cell_range);
     BoundingBox bb_clr(Vec<float>(0.0f,0.0f,0.0f), Vec<float>(1.0f,1.0f,1.0f));
-    Vec<uint64_t> compressed_pos;
-    Vec<uint64_t> compressed_clr;
-    Vec<uint8_t> p_bits(M_P.x, M_P.y, M_P.z);
-    Vec<uint8_t> c_bits(M_C.x, M_C.y, M_C.z);
-    unsigned progress = 0, new_progress = 0;
+
+    // Create one grid per thread
+    // to avoid race conditions writing to shared grid
+    auto max_threads = static_cast<unsigned>(omp_get_max_threads());
+    unsigned num_cells = pc_grid_->dimensions.x * pc_grid_->dimensions.y * pc_grid_->dimensions.z;
+    std::vector<std::vector<size_t>> t_grid_elmts(max_threads, std::vector<size_t>(num_cells, 0));
+    std::vector<unsigned> point_cell_idx(point_cloud->size());
+
+    // calculate cell indexes for points
+    // and number of elements per thread grid cell
+    #pragma omp parallel for schedule(static)
     for(unsigned i=0; i < point_cloud->size(); ++i) {
+        int t_num = omp_get_thread_num();
         if (!pc_grid_->bounding_box.contains(point_cloud->points[i]))
             continue;
         unsigned cell_idx = calcGridCellIndex(point_cloud->points[i], cell_range);
-        pos_cell = mapToCell(point_cloud->points[i], cell_range);
-        compressed_pos = mapVec(pos_cell, bb_cell, p_bits);
-        compressed_clr = mapVec(point_cloud->colors[i], bb_clr, c_bits);
-        (*pc_grid_)[cell_idx]->addVoxel(compressed_pos, compressed_clr);
+        t_grid_elmts[t_num][cell_idx] += 1;
+        point_cell_idx[i] = cell_idx;
     }
-    std::cout << "DONE building grid\n";
+
+    // resize grid cells based on summing elements per thread grid cell
+    // and create offsets of thread grid cell insert into main grid
+    std::vector<std::vector<unsigned>> t_curr_elmt(max_threads, std::vector<unsigned>(num_cells,0));
+    size_t cell_size = 0;
+    for(unsigned cell_idx=0; cell_idx < num_cells; ++cell_idx) {
+        for(unsigned t_num=1; t_num < t_curr_elmt.size(); ++t_num)
+            t_curr_elmt[t_num][cell_idx] += t_curr_elmt[t_num-1][cell_idx] + t_grid_elmts[t_num-1][cell_idx];
+        cell_size = t_curr_elmt[max_threads-1][cell_idx] + t_grid_elmts[max_threads-1][cell_idx];
+        (*pc_grid_)[cell_idx]->resize(cell_size);
+    }
+
+    time_t calc_offset = t.stopWatch();
+
+    // insert compressed points into main grid
+    #pragma omp parallel for schedule(static)
+    for(unsigned i=0; i < point_cloud->size(); ++i) {
+        int t_num = omp_get_thread_num();
+        if (!pc_grid_->bounding_box.contains(point_cloud->points[i]))
+            continue;
+        Vec<float> pos_cell = mapToCell(point_cloud->points[i], cell_range);
+        unsigned cell_idx = point_cell_idx[i];
+        unsigned elmnt_idx = t_curr_elmt[t_num][cell_idx];
+        (*pc_grid_)[cell_idx]->points[elmnt_idx] = mapVec(pos_cell, bb_cell,
+                                                          settings.grid_precision.point_precision[cell_idx]);
+        (*pc_grid_)[cell_idx]->colors[elmnt_idx] = mapVec(point_cloud->colors[i], bb_clr,
+                                                          settings.grid_precision.color_precision[cell_idx]);
+        t_curr_elmt[t_num][cell_idx] += 1;
+    }
+
+    time_t fill_grid = t.stopWatch();
+
+    if(settings.verbose) {
+        std::cout << "DONE building grid\n";
+        std::cout << "  > took " << fill_grid << "ms.\n";
+        std::cout << "    > offset calculation " << calc_offset << "ms.\n";
+        std::cout << "    > filling grid " << fill_grid - calc_offset << "ms.\n";
+    }
+}
+
+
+void PointCloudGridEncoder::buildPointCloudGrid(const std::vector<UncompressedVoxel>& point_cloud, int num_points) {
+    Measure t;
+    t.startWatch();
+
+    // init all cells to default BitCount
+    for(unsigned cell_idx = 0; cell_idx < pc_grid_->cells.size(); ++cell_idx) {
+        Vec<BitCount> M_P = settings.grid_precision.point_precision[cell_idx];
+        Vec<BitCount> M_C = settings.grid_precision.color_precision[cell_idx];
+        pc_grid_->cells[cell_idx]->initPoints(M_P.x, M_P.y, M_P.z);
+        pc_grid_->cells[cell_idx]->initColors(M_C.x, M_C.y, M_C.z);
+    }
+
+    Vec<float> cell_range = pc_grid_->bounding_box.calcRange();
+    cell_range.x /= (float) pc_grid_->dimensions.x;
+    cell_range.y /= (float) pc_grid_->dimensions.y;
+    cell_range.z /= (float) pc_grid_->dimensions.z;
+    BoundingBox bb_cell(Vec<float>(0.0f,0.0f,0.0f), cell_range);
+    BoundingBox bb_clr(Vec<float>(0.0f,0.0f,0.0f), Vec<float>(255.0f,255.0f,255.0f));
+
+    // Create one grid per thread
+    // to avoid race conditions writing to shared grid
+    auto max_threads = static_cast<unsigned>(omp_get_max_threads());
+    unsigned num_cells = pc_grid_->dimensions.x * pc_grid_->dimensions.y * pc_grid_->dimensions.z;
+    std::vector<std::vector<size_t>> t_grid_elmts(max_threads, std::vector<size_t>(num_cells, 0));
+    std::vector<unsigned> point_cell_idx(point_cloud.size());
+
+    if(num_points < 0)
+        num_points = point_cloud.size();
+
+    if(settings.verbose) {
+        std::cout << "POINT CLOUD\n";
+        std::cout << "  > size " << num_points << std::endl;
+    }
+
+    // TODO: remove discarded by BB
+    std::vector<int> discarded_by_bb(max_threads, 0);
+    // calculate cell indexes for points
+    // and number of elements per thread grid cell
+#pragma omp parallel for schedule(static)
+    for(unsigned i=0; i < num_points; ++i) {
+        int t_num = omp_get_thread_num();
+        if (!pc_grid_->bounding_box.contains(point_cloud[i].pos)) {
+            discarded_by_bb[t_num] += 1;
+            continue;
+        }
+        unsigned cell_idx = calcGridCellIndex(point_cloud[i].pos, cell_range);
+        t_grid_elmts[t_num][cell_idx] += 1;
+        point_cell_idx[i] = cell_idx;
+    }
+
+    int total_discarded_by_bb = 0;
+    for(auto disc_bb : discarded_by_bb) {
+        total_discarded_by_bb += disc_bb;
+    }
+
+    std::cout << "POINTS DISCARDED BY BoundingBox " << total_discarded_by_bb << std::endl;
+    std::cout << "  > " << num_points - total_discarded_by_bb << " voxels left.\n";
+
+    // resize grid cells based on summing elements per thread grid cell
+    // and create offsets of thread grid cell insert into main grid
+    std::vector<std::vector<unsigned>> t_curr_elmt(max_threads, std::vector<unsigned>(num_cells,0));
+    size_t cell_size = 0;
+    for(unsigned cell_idx=0; cell_idx < num_cells; ++cell_idx) {
+        for(unsigned t_num=1; t_num < t_curr_elmt.size(); ++t_num)
+            t_curr_elmt[t_num][cell_idx] += t_curr_elmt[t_num-1][cell_idx] + t_grid_elmts[t_num-1][cell_idx];
+        cell_size = t_curr_elmt[max_threads-1][cell_idx] + t_grid_elmts[max_threads-1][cell_idx];
+        (*pc_grid_)[cell_idx]->resize(cell_size);
+    }
+
+    time_t calc_offset = t.stopWatch();
+
+    // insert compressed points into main grid
+#pragma omp parallel for schedule(static)
+    for(unsigned i=0; i < num_points; ++i) {
+        int t_num = omp_get_thread_num();
+        if (!pc_grid_->bounding_box.contains(point_cloud[i].pos))
+            continue;
+        Vec<float> pos_cell = mapToCell(point_cloud[i].pos, cell_range);
+        unsigned cell_idx = point_cell_idx[i];
+        unsigned elmnt_idx = t_curr_elmt[t_num][cell_idx];
+        (*pc_grid_)[cell_idx]->points[elmnt_idx] = mapVec(pos_cell, bb_cell,
+                                                          settings.grid_precision.point_precision[cell_idx]);
+        (*pc_grid_)[cell_idx]->colors[elmnt_idx] = mapVec(point_cloud[i].color_rgba, bb_clr,
+                                                          settings.grid_precision.color_precision[cell_idx]);
+        t_curr_elmt[t_num][cell_idx] += 1;
+    }
+
+    time_t fill_grid = t.stopWatch();
+
+    if(settings.verbose) {
+        std::cout << "DONE building grid\n";
+        std::cout << "  > took " << fill_grid << "ms.\n";
+        std::cout << "    > offset calculation " << calc_offset << "ms.\n";
+        std::cout << "    > filling grid " << fill_grid - calc_offset << "ms.\n";
+    }
 }
 
 bool PointCloudGridEncoder::extractPointCloudFromGrid(PointCloud<Vec<float>, Vec<float>>* point_cloud)
@@ -76,49 +247,175 @@ bool PointCloudGridEncoder::extractPointCloudFromGrid(PointCloud<Vec<float>, Vec
     point_cloud->resize(num_grid_points);
     // calc cell range for local point mapping
     Vec<float> cell_range = pc_grid_->bounding_box.calcRange();
-    Vec<float> pos_cell, clr, glob_cell_min;
     cell_range.x /= (float) pc_grid_->dimensions.x;
     cell_range.y /= (float) pc_grid_->dimensions.y;
     cell_range.z /= (float) pc_grid_->dimensions.z;
     BoundingBox bb_cell(Vec<float>(0.0f,0.0f,0.0f), cell_range);
     BoundingBox bb_clr(Vec<float>(0.0f,0.0f,0.0f), Vec<float>(1.0f,1.0f,1.0f));
-    Vec<uint64_t> v_pos, v_clr;
-    unsigned cell_idx;
-    GridCell* cell;
-    unsigned point_idx=0;
-    Vec<uint8_t> p_bits;
-    Vec<uint8_t> c_bits;
-    for(unsigned x_idx=0; x_idx < pc_grid_->dimensions.x; ++x_idx) {
-        for(unsigned y_idx=0; y_idx < pc_grid_->dimensions.y; ++y_idx) {
-            for(unsigned z_idx=0; z_idx < pc_grid_->dimensions.z; ++z_idx) {
-                cell_idx = x_idx +
+
+    std::vector<std::vector<unsigned>> point_idx;
+    std::vector<unsigned> white_cells;
+    point_idx.resize(pc_grid_->cells.size());
+    unsigned cell_offset = 0;
+    for(unsigned i = 0; i < pc_grid_->cells.size(); ++i) {
+        point_idx[i].resize(pc_grid_->cells[i]->size());
+        for(unsigned j = 0; j < pc_grid_->cells[i]->size(); ++j)
+            point_idx[i][j] = cell_offset+j;
+        cell_offset += pc_grid_->cells[i]->size();
+        if(pc_grid_->cells[i]->size() > 0)
+            white_cells.emplace_back(i);
+    }
+
+    std::vector<Vec8> cell_idx_to_dim;
+    cell_idx_to_dim.resize(pc_grid_->dimensions.x*pc_grid_->dimensions.y*pc_grid_->dimensions.z);
+    for(uint8_t x_idx=0; x_idx < pc_grid_->dimensions.x; ++x_idx) {
+        for (uint8_t y_idx = 0; y_idx < pc_grid_->dimensions.y; ++y_idx) {
+            for (uint8_t z_idx = 0; z_idx < pc_grid_->dimensions.z; ++z_idx) {
+                unsigned cell_idx = x_idx +
                     y_idx * pc_grid_->dimensions.x +
                     z_idx * pc_grid_->dimensions.x * pc_grid_->dimensions.y;
-                cell = pc_grid_->cells[cell_idx];
-                p_bits.x = cell->points.getNX();
-                p_bits.y = cell->points.getNY();
-                p_bits.z = cell->points.getNZ();
-                c_bits.x = cell->colors.getNX();
-                c_bits.y = cell->colors.getNY();
-                c_bits.z = cell->colors.getNZ();
-                glob_cell_min = Vec<float>(cell_range.x*x_idx, cell_range.y*y_idx, cell_range.z*z_idx);
-                glob_cell_min += pc_grid_->bounding_box.min;
-                for(unsigned i=0; i < cell->size(); ++i) {
-                    v_pos = cell->points[i];
-                    v_clr = cell->colors[i];
-                    pos_cell = mapVecToFloat(v_pos, bb_cell, p_bits);
-                    clr = mapVecToFloat(v_clr, bb_clr, c_bits);
-                    point_cloud->points[point_idx] = pos_cell+glob_cell_min;
-                    point_cloud->colors[point_idx] = clr;
-                    ++point_idx;
-                }
+                cell_idx_to_dim[cell_idx].x = x_idx;
+                cell_idx_to_dim[cell_idx].y = y_idx;
+                cell_idx_to_dim[cell_idx].z = z_idx;
             }
         }
     }
-    return point_idx == point_cloud->size();
+
+    Measure m;
+    m.startWatch();
+
+    #pragma omp parallel for
+    for (unsigned i = 0; i < white_cells.size(); ++i) {
+        unsigned cell_idx = white_cells[i];
+        GridCell *cell = pc_grid_->cells[cell_idx];
+        Vec<uint8_t> p_bits(
+            cell->points.getNX(),
+            cell->points.getNY(),
+            cell->points.getNZ()
+        );
+        Vec<uint8_t> c_bits(
+            cell->colors.getNX(),
+            cell->colors.getNY(),
+            cell->colors.getNZ()
+        );
+        Vec<float> glob_cell_min = Vec<float>(
+            cell_range.x * cell_idx_to_dim[cell_idx].x,
+            cell_range.y * cell_idx_to_dim[cell_idx].y,
+            cell_range.z * cell_idx_to_dim[cell_idx].z
+        );
+        glob_cell_min += pc_grid_->bounding_box.min;
+        Vec<float> pos_cell, clr;
+        for (unsigned j = 0; j < cell->size(); ++j) {
+            pos_cell = Encoder::mapVecToFloat(pc_grid_->cells[cell_idx]->points[j], bb_cell, p_bits);
+            clr = Encoder::mapVecToFloat(pc_grid_->cells[cell_idx]->colors[j], bb_clr, c_bits);
+            point_cloud->points[point_idx[cell_idx][j]] = pos_cell + glob_cell_min;
+            point_cloud->colors[point_idx[cell_idx][j]] = clr;
+        }
+    }
+
+    if(settings.verbose) {
+        std::cout << "DECOMPRESSION done.\n";
+        std::cout << "  > took " << m.stopWatch() << "ms.\n";
+    }
+
+    return true;//point_idx == point_cloud->size();
+}
+
+bool PointCloudGridEncoder::extractPointCloudFromGrid(std::vector<UncompressedVoxel>* point_cloud)
+{
+    // calc num total points once
+    // to resize point_cloud
+    unsigned num_grid_points = 0;
+    for(auto cell: pc_grid_->cells)
+        num_grid_points += cell->size();
+    point_cloud->clear();
+    point_cloud->resize(num_grid_points);
+    // calc cell range for local point mapping
+    Vec<float> cell_range = pc_grid_->bounding_box.calcRange();
+    cell_range.x /= (float) pc_grid_->dimensions.x;
+    cell_range.y /= (float) pc_grid_->dimensions.y;
+    cell_range.z /= (float) pc_grid_->dimensions.z;
+    BoundingBox bb_cell(Vec<float>(0.0f,0.0f,0.0f), cell_range);
+    BoundingBox bb_clr(Vec<float>(0.0f,0.0f,0.0f), Vec<float>(255.0f,255.0f,255.0f));
+
+    std::vector<std::vector<unsigned>> point_idx;
+    std::vector<unsigned> white_cells;
+    point_idx.resize(pc_grid_->cells.size());
+    unsigned cell_offset = 0;
+    for(unsigned i = 0; i < pc_grid_->cells.size(); ++i) {
+        point_idx[i].resize(pc_grid_->cells[i]->size());
+        for(unsigned j = 0; j < pc_grid_->cells[i]->size(); ++j)
+            point_idx[i][j] = cell_offset+j;
+        cell_offset += pc_grid_->cells[i]->size();
+        if(pc_grid_->cells[i]->size() > 0)
+            white_cells.emplace_back(i);
+    }
+
+    std::vector<Vec8> cell_idx_to_dim;
+    cell_idx_to_dim.resize(pc_grid_->dimensions.x*pc_grid_->dimensions.y*pc_grid_->dimensions.z);
+    for(uint8_t x_idx=0; x_idx < pc_grid_->dimensions.x; ++x_idx) {
+        for (uint8_t y_idx = 0; y_idx < pc_grid_->dimensions.y; ++y_idx) {
+            for (uint8_t z_idx = 0; z_idx < pc_grid_->dimensions.z; ++z_idx) {
+                unsigned cell_idx = x_idx +
+                                    y_idx * pc_grid_->dimensions.x +
+                                    z_idx * pc_grid_->dimensions.x * pc_grid_->dimensions.y;
+                cell_idx_to_dim[cell_idx].x = x_idx;
+                cell_idx_to_dim[cell_idx].y = y_idx;
+                cell_idx_to_dim[cell_idx].z = z_idx;
+            }
+        }
+    }
+
+    Measure m;
+    m.startWatch();
+
+#pragma omp parallel for
+    for (unsigned i = 0; i < white_cells.size(); ++i) {
+        unsigned cell_idx = white_cells[i];
+        GridCell *cell = pc_grid_->cells[cell_idx];
+        Vec<uint8_t> p_bits(
+                cell->points.getNX(),
+                cell->points.getNY(),
+                cell->points.getNZ()
+        );
+        Vec<uint8_t> c_bits(
+                cell->colors.getNX(),
+                cell->colors.getNY(),
+                cell->colors.getNZ()
+        );
+        Vec<float> glob_cell_min = Vec<float>(
+                cell_range.x * cell_idx_to_dim[cell_idx].x,
+                cell_range.y * cell_idx_to_dim[cell_idx].y,
+                cell_range.z * cell_idx_to_dim[cell_idx].z
+        );
+        glob_cell_min += pc_grid_->bounding_box.min;
+        Vec<float> pos_cell, clr;
+        for (unsigned j = 0; j < cell->size(); ++j) {
+            pos_cell = Encoder::mapVecToFloat(pc_grid_->cells[cell_idx]->points[j], bb_cell, p_bits);
+            pos_cell += glob_cell_min;
+            clr = Encoder::mapVecToFloat(pc_grid_->cells[cell_idx]->colors[j], bb_clr, c_bits);
+            (*point_cloud)[point_idx[cell_idx][j]].pos[0] = pos_cell.x;
+            (*point_cloud)[point_idx[cell_idx][j]].pos[1] = pos_cell.y;
+            (*point_cloud)[point_idx[cell_idx][j]].pos[2] = pos_cell.z;
+            (*point_cloud)[point_idx[cell_idx][j]].color_rgba[0] = 255;
+            (*point_cloud)[point_idx[cell_idx][j]].color_rgba[1] = (unsigned char) clr.x;
+            (*point_cloud)[point_idx[cell_idx][j]].color_rgba[2] = (unsigned char) clr.y;
+            (*point_cloud)[point_idx[cell_idx][j]].color_rgba[3] = (unsigned char) clr.z;
+        }
+    }
+
+    if(settings.verbose) {
+        std::cout << "DECOMPRESSION done.\n";
+        std::cout << "  > took " << m.stopWatch() << "ms.\n";
+    }
+
+    return true;//point_idx == point_cloud->size();
 }
 
 zmq::message_t PointCloudGridEncoder::encodePointCloudGrid() {
+    Measure m;
+    m.startWatch();
+
     std::vector<unsigned> black_list;
     std::vector<CellHeader*> cell_headers;
     // initialize cell headers
@@ -155,9 +452,39 @@ zmq::message_t PointCloudGridEncoder::encodePointCloudGrid() {
     size_t offset = encodeGlobalHeader(message);
     offset = encodeBlackList(message, black_list, offset);
 
-    for(CellHeader* c_header: cell_headers) {
-        offset = encodeCellHeader(message, c_header, offset);
-        offset = encodeCell(message, pc_grid_->cells[c_header->cell_idx], offset);
+    time_t pre_cells = m.stopWatch();
+
+    // Calculate offsets prior to message encoding
+    // to be able to parallelize message creation
+    std::vector<size_t> cell_offsets(cell_headers.size(), 0);
+    for(unsigned i = 0; i < cell_headers.size(); ++i) {
+        if(i == 0) {
+            cell_offsets[i] += offset;
+        }
+        else {
+            cell_offsets[i] = cell_offsets[i-1];
+            cell_offsets[i] += CellHeader::getByteSize();
+            cell_offsets[i] += BitVecArray::getByteSize(
+                cell_headers[i-1]->num_elements,
+                cell_headers[i-1]->point_encoding_x,
+                cell_headers[i-1]->point_encoding_y,
+                cell_headers[i-1]->point_encoding_z
+            );
+            cell_offsets[i] += BitVecArray::getByteSize(
+                    cell_headers[i-1]->num_elements,
+                    cell_headers[i-1]->color_encoding_x,
+                    cell_headers[i-1]->color_encoding_y,
+                    cell_headers[i-1]->color_encoding_z
+            );
+        }
+    }
+
+    // generate message content for cells in parallel
+    #pragma omp parallel for
+    for(unsigned i = 0; i < cell_headers.size(); ++i) {
+        size_t temp_offset(cell_offsets[i]);
+        temp_offset = encodeCellHeader(message, cell_headers[i], temp_offset);
+        encodeCell(message, pc_grid_->cells[cell_headers[i]->cell_idx], temp_offset);
     }
 
     // Cleanup
@@ -166,6 +493,14 @@ zmq::message_t PointCloudGridEncoder::encodePointCloudGrid() {
         cell_headers.pop_back();
     }
 
+    time_t post_cells = m.stopWatch();
+
+    if(settings.verbose) {
+        std::cout << "ENCODING done.\n";
+        std::cout << "  > took " << post_cells << "ms.\n";
+        std::cout << "    > pre-encode cells " << pre_cells << "ms.\n";
+        std::cout << "    > encode cells " << post_cells-pre_cells << "ms.\n";
+    }
     return message;
 }
 
@@ -186,21 +521,85 @@ bool PointCloudGridEncoder::decodePointCloudGrid(zmq::message_t& msg)
     for(unsigned idx : black_list)
         black_set.insert(idx);
 
-    auto c_header = new CellHeader;
-    auto num_cells = static_cast<unsigned>(pc_grid_->cells.size());
+    Measure t;
+    t.startWatch();
+
+    // Extract Cell Headers to
+    // calculate grid data offsets prior to message decoding
+    // to be able to parallelize grid data extraction
+    size_t num_cells = header_->dimensions.x * header_->dimensions.y * header_->dimensions.z;
+    size_t num_white_cells = num_cells - black_set.size();
+    // Stores message offset per whitelisted grid cell
+    // offset encodes start position for memcpy to retrieve point&color data for cell
+    std::vector<size_t> cell_offsets(num_white_cells, 0);
+    // Stores cell header per whitelisted grid cell
+    std::vector<CellHeader*> cell_headers(num_white_cells, nullptr);
+    unsigned header_idx = 0;
+    old_offset = offset;
     for(unsigned c_idx = 0; c_idx < num_cells; ++c_idx) {
-        if(black_set.find(c_idx) != black_set.end())
+        if (black_set.find(c_idx) != black_set.end())
             continue;
-        c_header->cell_idx = c_idx;
-        // extract cell_header
-        old_offset = offset;
-        offset = decodeCellHeader(msg, c_header, offset);
-        if(offset == old_offset)
-            return false;
-        // extract cell using cell_header
-        offset = decodeCell(msg, c_header, offset);
+        cell_headers[header_idx] = new CellHeader;
+        cell_headers[header_idx]->cell_idx = c_idx;
+        if(header_idx == 0) {
+            cell_offsets[header_idx] += offset;
+            cell_offsets[header_idx] = decodeCellHeader(msg, cell_headers[header_idx], cell_offsets[header_idx]);
+            if(cell_offsets[header_idx] == old_offset) {
+                while(!cell_headers.empty()) {
+                    delete cell_headers.back();
+                    cell_headers.pop_back();
+                }
+                return false;
+            }
+        }
+        else {
+            cell_offsets[header_idx] = cell_offsets[header_idx-1];
+            cell_offsets[header_idx] += BitVecArray::getByteSize(
+                    cell_headers[header_idx-1]->num_elements,
+                    cell_headers[header_idx-1]->point_encoding_x,
+                    cell_headers[header_idx-1]->point_encoding_y,
+                    cell_headers[header_idx-1]->point_encoding_z
+            );
+            cell_offsets[header_idx] += BitVecArray::getByteSize(
+                    cell_headers[header_idx-1]->num_elements,
+                    cell_headers[header_idx-1]->color_encoding_x,
+                    cell_headers[header_idx-1]->color_encoding_y,
+                    cell_headers[header_idx-1]->color_encoding_z
+            );
+            old_offset = cell_offsets[header_idx];
+            cell_offsets[header_idx] = decodeCellHeader(msg, cell_headers[header_idx], cell_offsets[header_idx]);
+            if(old_offset == cell_offsets[header_idx]) {
+                while(!cell_headers.empty()) {
+                    delete cell_headers.back();
+                    cell_headers.pop_back();
+                }
+                return false;
+            }
+        }
+        ++header_idx;
     }
-    delete c_header;
+
+    time_t pre_cell_decode = t.stopWatch();
+
+    # pragma omp parallel for
+    for(header_idx = 0; header_idx < cell_headers.size(); ++header_idx) {
+        if(cell_offsets[header_idx] == decodeCell(msg, cell_headers[header_idx], cell_offsets[header_idx])) {
+            std::cout << "WARNING: No points in cell\n  > Cell should've been blacklisted.\n";
+        }
+    }
+
+    while(!cell_headers.empty()) {
+        delete cell_headers.back();
+        cell_headers.pop_back();
+    }
+
+    time_t post_cell_decode = t.stopWatch();
+
+    if(settings.verbose) {
+        std::cout << "DECODING CELLS done.\n  > took " << post_cell_decode << "ms.\n";
+        std::cout << "    > decode headers " << pre_cell_decode << "ms.\n";
+        std::cout << "    > decode cells " << post_cell_decode-pre_cell_decode << "ms.\n";
+    }
 
     return true;
 }
@@ -434,6 +833,17 @@ unsigned PointCloudGridEncoder::calcGridCellIndex(const Vec<float> &pos, const V
         z_idx * pc_grid_->dimensions.x * pc_grid_->dimensions.y;
 }
 
+unsigned PointCloudGridEncoder::calcGridCellIndex(const float pos[3], const Vec<float>& cell_range) const {
+    Vec<float> temp(pos[0], pos[1], pos[2]);
+    temp -= pc_grid_->bounding_box.min;
+    auto x_idx = static_cast<unsigned>(floor(static_cast<double>(temp.x / cell_range.x)));
+    auto y_idx = static_cast<unsigned>(floor(static_cast<double>(temp.y / cell_range.y)));
+    auto z_idx = static_cast<unsigned>(floor(static_cast<double>(temp.z / cell_range.z)));
+    return x_idx +
+           y_idx * pc_grid_->dimensions.x +
+           z_idx * pc_grid_->dimensions.x * pc_grid_->dimensions.y;
+}
+
 const Vec<float> PointCloudGridEncoder::mapToCell(const Vec<float> &pos, const Vec<float> &cell_range)
 {
     Vec<float> cell_pos(pos.x, pos.y, pos.z);
@@ -452,15 +862,31 @@ const Vec<float> PointCloudGridEncoder::mapToCell(const Vec<float> &pos, const V
     return cell_pos;
 }
 
+const Vec<float> PointCloudGridEncoder::mapToCell(const float pos[3], const Vec<float> &cell_range)
+{
+    Vec<float> cell_pos(pos[0], pos[1], pos[2]);
+    cell_pos -= pc_grid_->bounding_box.min;
+    float x_steps = cell_pos.x / cell_range.x;
+    float y_steps = cell_pos.y / cell_range.y;
+    float z_steps = cell_pos.z / cell_range.z;
+    // normalized cell_pos ([0,0,0]-[1,1,1])
+    cell_pos.x = x_steps - static_cast<float>(floor(static_cast<double>(x_steps)));
+    cell_pos.y = y_steps - static_cast<float>(floor(static_cast<double>(y_steps)));
+    cell_pos.z = z_steps - static_cast<float>(floor(static_cast<double>(z_steps)));
+    // actual pos
+    cell_pos.x *= cell_range.x;
+    cell_pos.y *= cell_range.y;
+    cell_pos.z *= cell_range.z;
+    return cell_pos;
+}
+
 size_t PointCloudGridEncoder::calcMessageSize(const std::vector<CellHeader *> & cell_headers) const {
     size_t header_size = GlobalHeader::getByteSize();
-    std::cout << "HEADER SIZE (bytes) " << header_size << std::endl;
     // header size
     size_t message_size = header_size;
     // blacklist size
     size_t blacklist_size = header_->num_blacklist*sizeof(unsigned);
     message_size += blacklist_size;
-    std::cout << "BLACKLIST SIZE (bytes) " << blacklist_size << std::endl;
     if(cell_headers.empty())
         return message_size;
     // size of one cell header
@@ -484,8 +910,14 @@ size_t PointCloudGridEncoder::calcMessageSize(const std::vector<CellHeader *> & 
                 c_header->color_encoding_z
         );
     }
-    std::cout << "CELLS\n";
-    std::cout << " > ELEMENT COUNT " << num_elements << std::endl;
+
+    if(settings.verbose) {
+        std::cout << "HEADER SIZE (bytes) " << header_size << std::endl;
+        std::cout << "BLACKLIST SIZE (bytes) " << blacklist_size << std::endl;
+        std::cout << "CELLS\n";
+        std::cout << " > ELEMENT COUNT " << num_elements << std::endl;
+    }
+    
     return message_size;
 }
 

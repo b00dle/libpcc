@@ -63,8 +63,11 @@ public:
     */
     void init(BitCount t_NX, BitCount t_NY, BitCount t_NZ);
 
-    /* Returns BitVec element i in data_ converted to Vec<uint64_t> */
-    Vec<uint64_t> const operator[](unsigned i);
+    /* Returns element i in data_ */
+    Vec<uint64_t> const& operator[](unsigned i) const;
+
+    /* Returns element i in data_ */
+    Vec<uint64_t>& operator[](unsigned i);
 
     /*
      * Fills list of BitVec elements from packed_data.
@@ -80,11 +83,19 @@ public:
     unsigned char* pack();
 
     /*
-     * Appends a BitVec element to data_ with initial value set from v.
-     * Note: component values in v have to be expressible by
+     * Appends aN element to data_.
+     * Note: component values in v should be expressible by
      * x, y & z - component precision set for this instance.
     */
     void push_back(const Vec<uint64_t>& v);
+
+    /*
+     * Appends an element to data_ value set from input parameters.
+     * Note: component values in v should be expressible by
+     * x, y & z - component precision set for this instance.
+    */
+    void emplace_back(uint64_t x, uint64_t y, uint64_t z);
+
 
     /* Returns the current number of elements in data_. */
     unsigned size() const;
@@ -96,7 +107,7 @@ public:
     void clear();
 
 private:
-    std::vector<BitVec*> data_;
+    std::vector<Vec<uint64_t>> data_;
     BitCount nx_;
     BitCount ny_;
     BitCount nz_;

@@ -8,6 +8,7 @@
 
 #include "../include/Vec.hpp"
 #include "../include/BoundingBox.hpp"
+#include "../include/UncompressedVoxel.hpp"
 
 /*
  * Data transfer object for template type precision based PointCloud data.
