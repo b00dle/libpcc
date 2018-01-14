@@ -81,8 +81,6 @@ Vec<float> const Encoder::rgbToXyz(Vec<float> rgb) {
 Vec<float> const Encoder::rgbToCieLab(Vec<float> const& rgb) {
   Vec<float> lab;
   Vec<float> xyz = rgbToXyz(rgb);
-  std::cout << "#########################################LAB-XYZ" << std::endl;
-  std::cout << xyz.x << " " << xyz.y << " " << xyz.z << std::endl;
 
   Vec<float> XYZ_D50_2 = Vec<float>(96.422f, 100.0f, 82.521f); //D50 Standard; 2° ViewAngle
   Vec<float> XYZ_D65_2 = Vec<float>(95.047f, 100.0f, 108.883f);
@@ -92,9 +90,6 @@ Vec<float> const Encoder::rgbToCieLab(Vec<float> const& rgb) {
   lab.x = 116.0f * cbrt(xyz.y / XYZ_D65_2.y) - 16;
   lab.y = 500.0f * (cbrt(xyz.x / XYZ_D65_2.x) - cbrt(xyz.y / XYZ_D65_2.y));
   lab.z = 200.0f * (cbrt(xyz.y / XYZ_D65_2.y) - cbrt(xyz.z / XYZ_D65_2.z));
-
-  std::cout << "#########################################CIE-LAB" << std::endl;
-  std::cout << lab.x << " " << lab.y << " " << lab.z << std::endl;
 
   return lab;
 }
