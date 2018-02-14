@@ -11,6 +11,7 @@
 #include <string>
 #include <sstream>
 #include <iostream>
+#include <map>
 
 /*
  * Provides interface to point cloud compression
@@ -45,6 +46,9 @@ public:
 private:
     template<typename C>
     using GridVec = std::vector<std::vector<Vec<C>>>;
+
+    typedef std::map<Vec<uint64_t>, std::pair<Vec<uint64_t>, int>> PropertyMap;
+    typedef std::pair<Vec<uint64_t>, std::pair<Vec<uint64_t>, int>> PropertyPair;
 
     /*
      * Data transfer object for encoding first chunk in a message

@@ -2,6 +2,7 @@
 
 #include <set>
 #include <omp.h>
+#include <map>
 
 #include "../include/Measurement.hpp"
 
@@ -173,6 +174,51 @@ void PointCloudGridEncoder::buildPointCloudGrid(const std::vector<UncompressedVo
         std::cout << "  > size " << num_points << std::endl;
     }
 
+    std::vector<PropertyMap> cell_prop_map(num_cells);
+    PropertyMap::iterator it;
+    int discarded_by_bb = 0;
+    int discarded_by_cell = 0;
+    for(unsigned i=0; i < num_points; ++i) {
+        if (!pc_grid_->bounding_box.contains(point_cloud[i].pos)) {
+            discarded_by_bb++;
+            continue;
+        }
+        Vec<float> pos_cell = mapToCell(point_cloud[i].pos, cell_range);
+        unsigned cell_idx = calcGridCellIndex(point_cloud[i].pos, cell_range);
+        Vec<uint64_t> comp_pos = mapVec(pos_cell, bb_cell,
+                                        settings.grid_precision.point_precision[cell_idx]);
+        Vec<uint64_t> comp_clr = mapVec(point_cloud[i].color_rgba, bb_clr,
+                                        settings.grid_precision.color_precision[cell_idx]);
+        it = cell_prop_map[cell_idx].find(comp_pos);
+        if(it == cell_prop_map[cell_idx].end()) {
+            cell_prop_map[cell_idx].insert(PropertyPair(
+                    comp_pos, std::pair<Vec<uint64_t>, int>(comp_clr, 1)));
+        } else {
+            discarded_by_cell++;
+            std::pair<Vec<uint64_t>, int> prop = it->second;
+            prop.second += 1;
+            float weight = 1 / (float) (prop.second);
+            float new_r = weight * (float) comp_clr.x + (1-weight) * (float) prop.first.x;
+            float new_g = weight * (float) comp_clr.y + (1-weight) * (float) prop.first.y;
+            float new_b = weight * (float) comp_clr.z + (1-weight) * (float) prop.first.z;
+            prop.first = Vec<uint64_t>((uint64_t) new_r,(uint64_t) new_g,(uint64_t) new_b);
+            cell_prop_map[cell_idx][comp_pos] = prop;
+        }
+    }
+
+    for(unsigned cell_idx = 0; cell_idx < num_cells; ++cell_idx) {
+        (*pc_grid_)[cell_idx]->resize(cell_prop_map[cell_idx].size());
+        for(it = cell_prop_map[cell_idx].begin(); it != cell_prop_map[cell_idx].end(); ++it) {
+            (*pc_grid_)[cell_idx]->addVoxel(it->first, it->second.first);
+        }
+    }
+
+    std::cout << "POINTS DISCARDED \n";
+    std::cout << "  > BoundingBox " << discarded_by_bb << std::endl;
+    std::cout << "  > Quantization " << discarded_by_cell<< std::endl;
+    std::cout << "  > " << num_points - discarded_by_bb - discarded_by_cell << " voxels left.\n";
+
+/*
     // TODO: remove discarded by BB
     std::vector<int> discarded_by_bb(max_threads, 0);
     // calculate cell indexes for points
@@ -234,6 +280,7 @@ void PointCloudGridEncoder::buildPointCloudGrid(const std::vector<UncompressedVo
         std::cout << "    > offset calculation " << calc_offset << "ms.\n";
         std::cout << "    > filling grid " << fill_grid - calc_offset << "ms.\n";
     }
+*/
 }
 
 bool PointCloudGridEncoder::extractPointCloudFromGrid(PointCloud<Vec<float>, Vec<float>>* point_cloud)
