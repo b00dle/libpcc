@@ -23,7 +23,169 @@ int main(int argc, char* argv[]){
     socket.bind(endpoint.c_str());
     */
 
-    // ENCODER STUP
+    std::vector<std::string> files;
+    files.push_back("./snap-8-6-4de.txt");
+    files.push_back("./snap-8-7-6de.txt");
+    files.push_back("./snap-16-8-8de.txt");
+    files.push_back("./snap-16-16-8de.txt");
+    files.push_back("./snap-16-32-8de.txt");
+    files.push_back("./snap-8-8-8de.txt");
+    files.push_back("./snap-4-8-8de.txt");
+    files.push_back("./snap-16-7-8de.txt");
+    files.push_back("./snap-8-10-8de.txt");
+    files.push_back("./snap-4-12-8de.txt");
+    files.push_back("./snap-8-8-7de.txt");
+    files.push_back("./snap-8-8-6de.txt");
+    files.push_back("./snap-8-8-5de.txt");
+    files.push_back("./snap-8-8-4de.txt");
+    files.push_back("./snap-8-8-3de.txt");
+    files.push_back("./snap-16-8-7de.txt");
+    files.push_back("./snap-16-8-6de.txt");
+    files.push_back("./snap-16-8-5de.txt");
+    files.push_back("./snap-16-8-4de.txt");
+    files.push_back("./snap-16-8-3de.txt");
+    files.push_back("./snap-8-16-8de.txt");
+    files.push_back("./snap-8-32-8de.txt");
+
+    PointCloudGridEncoder encoder;
+    BoundingBox bb(Vec<float>(-1.0f, 0.0f, -1.0f), Vec<float>(1.0f, 2.2f, 1.0f));
+    encoder.settings.grid_precision = GridPrecisionDescriptor(
+            Vec8(8,8,8),
+            bb,
+            Vec<BitCount>(BIT_8,BIT_8,BIT_8),
+            Vec<BitCount>(BIT_8,BIT_8,BIT_8)
+    );
+
+    std::vector<UncompressedVoxel> v_raw;
+    BinaryFile raw;
+    if(raw.read("./clean.txt")) {
+        v_raw.resize(raw.getSize() / sizeof(UncompressedVoxel));
+        raw.copy((char*) v_raw.data());
+        std::cout << "READ raw voxels from file done.\n";
+    }
+    else {
+        std::cout << "READ raw voxels from file failed.\n";
+    }
+
+    std::cout << "Encoding Type, Position Error Avg, Position Error Max, Color Error Avg, Color Error Max" << std::endl;
+    for(auto indx : files) {
+        std::vector<UncompressedVoxel> v_dec;
+        BinaryFile dec;
+        if(dec.read(indx)) {
+            v_dec.resize(dec.getSize() / sizeof(UncompressedVoxel));
+            dec.copy((char*) v_dec.data());
+        //    std::cout << "READ dec voxels from file done.\n";
+        }
+        else {
+            std::cout << "READ dec voxels from file failed.\n";
+        }
+
+        v_raw[0].pos; // float[3]
+        v_raw[0].color_rgba; // unsigned char[4] aaaaaaaargb
+        PointCloud<Vec<float>, Vec<float>> pc;
+        for(auto voxel : v_raw) {
+            pc.points.push_back(Vec<float>(voxel.pos[0],voxel.pos[1],voxel.pos[2]));
+            pc.colors.push_back(Vec<float>(((float)voxel.color_rgba[1]) / 255.0f, ((float) voxel.color_rgba[2]) / 255.0f, ((float) voxel.color_rgba[3]) / 255.0f));
+            //std::cout << voxel.pos[0] << ", " << voxel.pos[1] << ", " << voxel.pos[2] << std::endl; 
+            //std::cout << ((int)voxel.color_rgba[1]) << ", " << ((int)voxel.color_rgba[2]) << ", " << ((int)voxel.color_rgba[1])<< std::endl;
+        }
+        v_dec[0].pos; // float[3]
+        v_dec[0].color_rgba; // unsigned char[4] aaaaaaaargb
+        PointCloud<Vec<float>, Vec<float>> pc2;
+        for(auto voxel : v_dec) {
+            pc2.points.push_back(Vec<float>(voxel.pos[0],voxel.pos[1],voxel.pos[2]));
+            pc2.colors.push_back(Vec<float>(((float)voxel.color_rgba[1]) / 255.0f, ((float) voxel.color_rgba[2]) / 255.0f, ((float) voxel.color_rgba[3]) / 255.0f));
+        }
+        PointCloud<Vec<float>, Vec<float>> pc3;
+        pc2.points.push_back(Vec<float>(1.0f, 2.0f, 3.0f));
+        pc2.colors.push_back(Vec<float>(0.0f, 0.0f, 0.0f));
+
+        PointCloud<Vec<float>, Vec<float>> pc4;
+        pc3.points.push_back(Vec<float>(1.0f, 2.0f, 3.0f));
+        pc3.colors.push_back(Vec<float>(0.0f, 0.0f, 0.0f));
+
+        Measure m;
+        std::vector<float> results = m.comparePC(pc, pc2, bb);
+
+        std::cout << indx << ", ";
+        std::cout << results[0] << ", ";
+        std::cout << results[2] << ", ";
+        std::cout << results[3] << ", ";
+        std::cout << results[5] << std::endl;
+    }
+
+    //m.printResultsPC(results);
+
+/*
+    std::vector<UncompressedVoxel> v_decomp;
+    BinaryFile decomp;
+    if(decomp.read("./snap-8-8-8de.txt")) {
+        v_decomp.resize(decomp.getSize() / sizeof(UncompressedVoxel));
+        decomp.copy((char*) v_decomp.data());
+        std::cout << "READ decompressed voxels from file done.\n";
+    }
+    else {
+        std::cout << "READ decompressed voxels from file failed.\n";
+    }
+
+    v_decomp[0].pos; // float[3]
+    v_decomp[0].color_rgba; // unsigned char[4] aaaaaaaargb
+    PointCloud<Vec<float>, Vec<float>> pc2;
+    for(auto voxel : v_decomp) {
+        pc2.points.push_back(Vec<float>(voxel.pos[0],voxel.pos[1],voxel.pos[2]));
+        pc2.colors.push_back(Vec<float>(((float)voxel.color_rgba[1]) / 255.0f, ((float) voxel.color_rgba[2]) / 255.0f, ((float) voxel.color_rgba[3]) / 255.0f));
+    }
+
+/*
+    std::vector<UncompressedVoxel> v_raw;
+    BinaryFile raw;
+    if(raw.read("./raw_data.txt")) {
+        v_raw.resize(raw.getSize() / sizeof(UncompressedVoxel));
+        raw.copy((char*) v_raw.data());
+        std::cout << "READ raw voxels from file done.\n";
+    }
+    else {
+        std::cout << "READ raw voxels from file failed.\n";
+    }
+    std::cout << "RAW VOXEL data (parsed from file) \n";
+    std::cout << "  > voxel count " << v_raw.size() << std::endl;
+
+    v_raw[0].pos; // float[3]
+    v_raw[0].color_rgba; // unsigned char[4] aaaaaaaargb
+    PointCloud<Vec<float>, Vec<float>> pc;
+    for(auto voxel : v_raw) {
+        pc.points.push_back(Vec<float>(voxel.pos[0],voxel.pos[1],voxel.pos[2]));
+        pc.colors.push_back(Vec<float>(((float)voxel.color_rgba[1]) / 255.0f, ((float) voxel.color_rgba[2]) / 255.0f, ((float) voxel.color_rgba[3]) / 255.0f));
+
+        //std::cout << ((float)voxel.color_rgba[1] / 255.0f) << ", " << ((float)voxel.color_rgba[2] / 255.0f) << ", " << ((float)voxel.color_rgba[3] / 255.0f) << std::endl;
+    }
+
+    std::vector<UncompressedVoxel> v_decomp;
+    BinaryFile decomp;
+    if(decomp.read("./decomp_data.txt")) {
+        v_decomp.resize(decomp.getSize() / sizeof(UncompressedVoxel));
+        decomp.copy((char*) v_decomp.data());
+        std::cout << "READ raw voxels from file done.\n";
+    }
+    else {
+        std::cout << "READ raw voxels from file failed.\n";
+    }
+    std::cout << "RAW VOXEL data (parsed from file) \n";
+    std::cout << "  > voxel count " << v_decomp.size() << std::endl;
+
+    v_decomp[0].pos; // float[3]
+    v_decomp[0].color_rgba; // unsigned char[4] aaaaaaaargb
+    PointCloud<Vec<float>, Vec<float>> pc2;
+    for(auto voxel : v_decomp) {
+        pc2.points.push_back(Vec<float>(voxel.pos[0],voxel.pos[1],voxel.pos[2]));
+        pc2.colors.push_back(Vec<float>(((float)voxel.color_rgba[1]) / 255.0f, ((float) voxel.color_rgba[2]) / 255.0f, ((float) voxel.color_rgba[3]) / 255.0f));
+    }
+*/
+
+
+
+    /*
+    // ENCODER SETUP
     PointCloudGridEncoder encoder;
     // settings should match './grid_log_info.txt'
     BoundingBox bb(Vec<float>(-1.0f,0.05f,-1.0f), Vec<float>(1.0f,2.2f,1.0f));
@@ -33,6 +195,7 @@ int main(int argc, char* argv[]){
             Vec<BitCount>(BIT_4,BIT_4,BIT_4), // default point encoding
             Vec<BitCount>(BIT_8,BIT_8,BIT_8)  // default color encoding
     );
+    encoder.settings.verbose = true; //extended information
 
     // READ RAW DATA FROM FILE
     std::vector<UncompressedVoxel> v_raw;
@@ -122,7 +285,7 @@ int main(int argc, char* argv[]){
               << avg_pos[0] << ","
               << avg_pos[1] << ","
               << avg_pos[2] << std::endl;
-
+    */
     /*
     Measure t;
 

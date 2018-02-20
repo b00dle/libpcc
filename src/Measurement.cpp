@@ -50,13 +50,16 @@ Measure::~Measure()
 
 
   //Calculate Mean Squared Error between two PointClouds
-  std::vector<float> Measure::comparePC(PointCloud<Vec<float>, Vec<float>> p1, PointCloud<Vec<float>, Vec<float>> p2) {
+  std::vector<float> Measure::comparePC(PointCloud<Vec<float>, Vec<float>> const& p1, PointCloud<Vec<float>, Vec<float>> const& p2, BoundingBox const& bb) {
     std::vector<Vec<float>> p1_data_points = p1.points;
     std::vector<Vec<float>> p2_data_points = p2.points;
     std::vector<Vec<float>> p1_data_points_color = p1.colors;
     std::vector<Vec<float>> p2_data_points_color = p2.colors;
     //std::cout << p1_data_points.size() << std::endl;
     //std::cout << p2_data_points.size() << std::endl;
+
+    //std::cout << p1_data_points[0].x << ", " << p1_data_points[0].y << ", " << p1_data_points[0].z << std::endl;
+    //std::cout << p2_data_points[0].x << ", " << p2_data_points[0].y << ", " << p2_data_points[0].z << std::endl;
 
     std::list<float> min_distance_list;
     std::list<float> color_error_list;
@@ -70,30 +73,39 @@ Measure::~Measure()
     float max_color_error = 0;
 
     for(unsigned p1_index = 0; p1_index < p1_data_points.size(); ++p1_index) {
-      float nearest_pair = 10000;
+      if(!bb.contains(p1_data_points[p1_index])) {
+        continue;
+      }
+      float nearest_pair = 100000;
       for(unsigned p2_index = 0; p2_index < p2_data_points.size(); ++p2_index) {
-        float x_pair = (p1_data_points[p1_index].x - p2_data_points[p2_index].x) *
-          (p1_data_points[p1_index].x - p2_data_points[p2_index].x);
-        float y_pair = (p1_data_points[p1_index].y - p2_data_points[p2_index].y) *
-          (p1_data_points[p1_index].y - p2_data_points[p2_index].y);
-        float z_pair = (p1_data_points[p1_index].z - p2_data_points[p2_index].z) *
-          (p1_data_points[p1_index].z - p2_data_points[p2_index].z);
-        float distance_pair =  sqrt(x_pair + y_pair + z_pair);
+        if(!bb.contains(p2_data_points[p2_index])) {
+          continue;
+        }
+        float x_pair = ((float)p1_data_points[p1_index].x - (float)p2_data_points[p2_index].x) *
+          ((float)p1_data_points[p1_index].x - (float)p2_data_points[p2_index].x);
+        float y_pair = ((float)p1_data_points[p1_index].y - (float)p2_data_points[p2_index].y) *
+          ((float)p1_data_points[p1_index].y - (float)p2_data_points[p2_index].y);
+        float z_pair = ((float)p1_data_points[p1_index].z - (float)p2_data_points[p2_index].z) *
+          ((float)p1_data_points[p1_index].z - (float)p2_data_points[p2_index].z);
+        float distance_pair =  sqrt((x_pair + y_pair + z_pair));
 
         if(distance_pair < nearest_pair) {
           nearest_pair = distance_pair;
           color_error = colorErrorCielab(p1_data_points_color[p1_index], p2_data_points_color[p2_index]);
         }
       }
+
       min_distance_list.push_back(nearest_pair);
       color_error_list.push_back(color_error);
     }
+
     for(auto const& l : min_distance_list) {
       avg_error += l;
       if(max_error < l) {
         max_error = l;
       }
     }
+
     for(auto const& k : color_error_list) {
       avg_color_error += k;
       if(max_color_error < k) {

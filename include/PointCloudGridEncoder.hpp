@@ -40,8 +40,24 @@ public:
         int num_threads;
     };
 
-    EncodingSettings settings;
+    struct EncodeLog {
+        time_t comp_time;
+        time_t encode_time;
+        size_t raw_byte_size;
+        size_t comp_byte_size;
+    };
 
+    struct DecodeLog {
+        time_t decomp_time;
+        time_t decode_time;
+        size_t total_cell_header_size;
+        size_t global_header_size;
+        size_t black_list_size;
+    };
+
+    EncodingSettings settings;
+    EncodeLog encode_log;
+    DecodeLog decode_log;
 private:
     template<typename C>
     using GridVec = std::vector<std::vector<Vec<C>>>;
