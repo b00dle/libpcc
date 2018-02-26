@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <cstdlib>
+#include <iostream>
 
 /*
  * Template Class to encapsulate 3 component Vector
@@ -48,6 +49,28 @@ struct Vec {
         x = temp.x;
         y = temp.y;
         z = temp.z;
+    }
+
+    size_t hash() const {
+        /*
+        size_t hx = std::hash<C>()(x);
+        size_t hy = std::hash<C>()(y);
+        size_t hz = std::hash<C>()(z);
+        size_t h = 0;
+        h = h | hx;
+        h = h | hy << 8;
+        h = h | hz << 16;
+        return h;
+        */
+        size_t h = 0;
+        h = h | x;
+        h = h | y << 8;
+        h = h | z << 16;
+        return h;
+    }
+
+    bool operator<(const Vec<C>& rhs) const {
+        return hash() < rhs.hash();
     }
 
     C x;

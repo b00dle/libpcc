@@ -2,6 +2,7 @@
 
 #include <set>
 #include <omp.h>
+#include <map>
 
 #include "../include/Measurement.hpp"
 
@@ -173,66 +174,126 @@ void PointCloudGridEncoder::buildPointCloudGrid(const std::vector<UncompressedVo
         std::cout << "  > size " << num_points << std::endl;
     }
 
-    // TODO: remove discarded by BB
-    std::vector<int> discarded_by_bb(max_threads, 0);
-    // calculate cell indexes for points
-    // and number of elements per thread grid cell
-#pragma omp parallel for schedule(static)
-    for(unsigned i=0; i < num_points; ++i) {
-        int t_num = omp_get_thread_num();
-        if (!pc_grid_->bounding_box.contains(point_cloud[i].pos)) {
-            discarded_by_bb[t_num] += 1;
-            continue;
+    // discard overlapping points after quantization 
+    // and calc overall point color by incremental mean. 
+    // - not parallelized, thus slower.
+    // - reduces number of points in grid (compared to original) for increasing coarsity of abstraction  
+    if(settings.irrelevance_coding) {
+        std::vector<PropertyMap> cell_prop_map(num_cells);
+        PropertyMap::iterator it;
+        int discarded_by_bb = 0;
+        int discarded_by_cell = 0;
+        for(unsigned i=0; i < num_points; ++i) {
+            if (!pc_grid_->bounding_box.contains(point_cloud[i].pos)) {
+                discarded_by_bb++;
+                continue;
+            }
+            Vec<float> pos_cell = mapToCell(point_cloud[i].pos, cell_range);
+            unsigned cell_idx = calcGridCellIndex(point_cloud[i].pos, cell_range);
+            Vec<uint64_t> comp_pos = mapVec(pos_cell, bb_cell,
+                                            settings.grid_precision.point_precision[cell_idx]);
+            Vec<uint64_t> comp_clr = mapVec(point_cloud[i].color_rgba, bb_clr,
+                                            settings.grid_precision.color_precision[cell_idx]);
+            it = cell_prop_map[cell_idx].find(comp_pos);
+            if(it == cell_prop_map[cell_idx].end()) {
+                cell_prop_map[cell_idx].insert(PropertyPair(
+                        comp_pos, std::pair<Vec<uint64_t>, int>(comp_clr, 1)));
+            } else {
+                discarded_by_cell++;
+                std::pair<Vec<uint64_t>, int> prop = it->second;
+                prop.second += 1;
+                float weight = 1 / (float) (prop.second);
+                float new_r = weight * (float) comp_clr.x + (1-weight) * (float) prop.first.x;
+                float new_g = weight * (float) comp_clr.y + (1-weight) * (float) prop.first.y;
+                float new_b = weight * (float) comp_clr.z + (1-weight) * (float) prop.first.z;
+                prop.first = Vec<uint64_t>((uint64_t) new_r,(uint64_t) new_g,(uint64_t) new_b);
+                cell_prop_map[cell_idx][comp_pos] = prop;
+            }
         }
-        unsigned cell_idx = calcGridCellIndex(point_cloud[i].pos, cell_range);
-        t_grid_elmts[t_num][cell_idx] += 1;
-        point_cell_idx[i] = cell_idx;
+
+        for(unsigned cell_idx = 0; cell_idx < num_cells; ++cell_idx) {
+            (*pc_grid_)[cell_idx]->resize(cell_prop_map[cell_idx].size());
+            int elmnt_idx = 0;
+            for(it = cell_prop_map[cell_idx].begin(); it != cell_prop_map[cell_idx].end(); ++it) {
+                (*pc_grid_)[cell_idx]->points[elmnt_idx] = it->first;
+                (*pc_grid_)[cell_idx]->colors[elmnt_idx] = it->second.first;
+                ++elmnt_idx;
+            }
+        }
+
+        if(settings.verbose) {
+            std::cout << "POINTS DISCARDED \n";
+            std::cout << "  > BoundingBox " << discarded_by_bb << std::endl;
+            std::cout << "  > Quantization " << discarded_by_cell<< std::endl;
+            std::cout << "  > " << num_points - discarded_by_bb - discarded_by_cell << " voxels left.\n";
+        }
     }
-
-    int total_discarded_by_bb = 0;
-    for(auto disc_bb : discarded_by_bb) {
-        total_discarded_by_bb += disc_bb;
-    }
-
-    std::cout << "POINTS DISCARDED BY BoundingBox " << total_discarded_by_bb << std::endl;
-    std::cout << "  > " << num_points - total_discarded_by_bb << " voxels left.\n";
-
-    // resize grid cells based on summing elements per thread grid cell
-    // and create offsets of thread grid cell insert into main grid
-    std::vector<std::vector<unsigned>> t_curr_elmt(max_threads, std::vector<unsigned>(num_cells,0));
-    size_t cell_size = 0;
-    for(unsigned cell_idx=0; cell_idx < num_cells; ++cell_idx) {
-        for(unsigned t_num=1; t_num < t_curr_elmt.size(); ++t_num)
-            t_curr_elmt[t_num][cell_idx] += t_curr_elmt[t_num-1][cell_idx] + t_grid_elmts[t_num-1][cell_idx];
-        cell_size = t_curr_elmt[max_threads-1][cell_idx] + t_grid_elmts[max_threads-1][cell_idx];
-        (*pc_grid_)[cell_idx]->resize(cell_size);
-    }
-
-    time_t calc_offset = t.stopWatch();
-
-    // insert compressed points into main grid
+    // keep overlapping points
+    // - parallel computation, thus faster
+    // - number of points in grid equal to points in uncompressed point cloud
+    else {
+        std::vector<int> discarded_by_bb(max_threads, 0);
+        // calculate cell indexes for points
+        // and number of elements per thread grid cell
 #pragma omp parallel for schedule(static)
-    for(unsigned i=0; i < num_points; ++i) {
-        int t_num = omp_get_thread_num();
-        if (!pc_grid_->bounding_box.contains(point_cloud[i].pos))
-            continue;
-        Vec<float> pos_cell = mapToCell(point_cloud[i].pos, cell_range);
-        unsigned cell_idx = point_cell_idx[i];
-        unsigned elmnt_idx = t_curr_elmt[t_num][cell_idx];
-        (*pc_grid_)[cell_idx]->points[elmnt_idx] = mapVec(pos_cell, bb_cell,
-                                                          settings.grid_precision.point_precision[cell_idx]);
-        (*pc_grid_)[cell_idx]->colors[elmnt_idx] = mapVec(point_cloud[i].color_rgba, bb_clr,
-                                                          settings.grid_precision.color_precision[cell_idx]);
-        t_curr_elmt[t_num][cell_idx] += 1;
-    }
+        for(unsigned i=0; i < num_points; ++i) {
+            int t_num = omp_get_thread_num();
+            if (!pc_grid_->bounding_box.contains(point_cloud[i].pos)) {
+                discarded_by_bb[t_num] += 1;
+                continue;
+            }
+            unsigned cell_idx = calcGridCellIndex(point_cloud[i].pos, cell_range);
+            t_grid_elmts[t_num][cell_idx] += 1;
+            point_cell_idx[i] = cell_idx;
+        }
 
-    time_t fill_grid = t.stopWatch();
+        int total_discarded_by_bb = 0;
+        for(auto disc_bb : discarded_by_bb) {
+            total_discarded_by_bb += disc_bb;
+        }
 
-    if(settings.verbose) {
-        std::cout << "DONE building grid\n";
-        std::cout << "  > took " << fill_grid << "ms.\n";
-        std::cout << "    > offset calculation " << calc_offset << "ms.\n";
-        std::cout << "    > filling grid " << fill_grid - calc_offset << "ms.\n";
+        if(settings.verbose) {
+            std::cout << "POINTS DISCARDED BY BoundingBox " << total_discarded_by_bb << std::endl;
+            std::cout << "  > " << num_points - total_discarded_by_bb << " voxels left.\n";
+        }
+
+        // resize grid cells based on summing elements per thread grid cell
+        // and create offsets of thread grid cell insert into main grid
+        std::vector<std::vector<unsigned>> t_curr_elmt(max_threads, std::vector<unsigned>(num_cells,0));
+        size_t cell_size = 0;
+        for(unsigned cell_idx=0; cell_idx < num_cells; ++cell_idx) {
+            for(unsigned t_num=1; t_num < t_curr_elmt.size(); ++t_num)
+                t_curr_elmt[t_num][cell_idx] += t_curr_elmt[t_num-1][cell_idx] + t_grid_elmts[t_num-1][cell_idx];
+            cell_size = t_curr_elmt[max_threads-1][cell_idx] + t_grid_elmts[max_threads-1][cell_idx];
+            (*pc_grid_)[cell_idx]->resize(cell_size);
+        }
+
+        time_t calc_offset = t.stopWatch();
+
+        // insert compressed points into main grid
+#pragma omp parallel for schedule(static)
+        for(unsigned i=0; i < num_points; ++i) {
+            int t_num = omp_get_thread_num();
+            if (!pc_grid_->bounding_box.contains(point_cloud[i].pos))
+                continue;
+            Vec<float> pos_cell = mapToCell(point_cloud[i].pos, cell_range);
+            unsigned cell_idx = point_cell_idx[i];
+            unsigned elmnt_idx = t_curr_elmt[t_num][cell_idx];
+            (*pc_grid_)[cell_idx]->points[elmnt_idx] = mapVec(pos_cell, bb_cell,
+                                                              settings.grid_precision.point_precision[cell_idx]);
+            (*pc_grid_)[cell_idx]->colors[elmnt_idx] = mapVec(point_cloud[i].color_rgba, bb_clr,
+                                                              settings.grid_precision.color_precision[cell_idx]);
+            t_curr_elmt[t_num][cell_idx] += 1;
+        }
+
+        time_t fill_grid = t.stopWatch();
+
+        if(settings.verbose) {
+            std::cout << "DONE building grid\n";
+            std::cout << "  > took " << fill_grid << "ms.\n";
+            std::cout << "    > offset calculation " << calc_offset << "ms.\n";
+            std::cout << "    > filling grid " << fill_grid - calc_offset << "ms.\n";
+        }
     }
 }
 
