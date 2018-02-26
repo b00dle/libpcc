@@ -32,6 +32,7 @@ public:
             : grid_precision()
             , num_threads(24)
             , verbose(false)
+            , irrelevance_coding(true)
         {}
 
         EncodingSettings(const EncodingSettings&) = default;
@@ -39,6 +40,7 @@ public:
         GridPrecisionDescriptor grid_precision;
         bool verbose;
         int num_threads;
+        bool irrelevance_coding;
     };
 
     EncodingSettings settings;
