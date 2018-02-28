@@ -4,6 +4,8 @@
 #include <omp.h>
 #include <map>
 
+#include "zlib.h"
+
 #include "../include/Measurement.hpp"
 
 PointCloudGridEncoder::PointCloudGridEncoder(const EncodingSettings& s)
@@ -11,15 +13,18 @@ PointCloudGridEncoder::PointCloudGridEncoder(const EncodingSettings& s)
     , settings(s)
     , pc_grid_()
     , header_()
+    , global_header_()
 {
     pc_grid_ = new PointCloudGrid(Vec8(1,1,1));
-    header_ = new GlobalHeader;
+    header_ = new GridHeader;
+    global_header_ = new GlobalHeader;
 }
 
 PointCloudGridEncoder::~PointCloudGridEncoder()
 {
     delete pc_grid_;
     delete header_;
+    delete global_header_;
 }
 
 zmq::message_t PointCloudGridEncoder::encode(PointCloud<Vec<float>, Vec<float>>* point_cloud)
@@ -30,7 +35,12 @@ zmq::message_t PointCloudGridEncoder::encode(PointCloud<Vec<float>, Vec<float>>*
     pc_grid_->resize(settings.grid_precision.dimensions);
     pc_grid_->bounding_box = point_cloud->bounding_box;
     buildPointCloudGrid(point_cloud);
-    return encodePointCloudGrid();
+
+    if(settings.entropy_coding) {
+      return entropyCompression(encodePointCloudGrid());
+    } else {
+      return prependGlobalHeader(encodePointCloudGrid());
+    }
 };
 
 zmq::message_t PointCloudGridEncoder::encode(const std::vector<UncompressedVoxel>& point_cloud, int num_points)
@@ -41,7 +51,12 @@ zmq::message_t PointCloudGridEncoder::encode(const std::vector<UncompressedVoxel
     pc_grid_->resize(settings.grid_precision.dimensions);
     pc_grid_->bounding_box = settings.grid_precision.bounding_box;
     buildPointCloudGrid(point_cloud, num_points);
-    return encodePointCloudGrid();
+
+    if(settings.entropy_coding) {
+      return entropyCompression(encodePointCloudGrid());
+    } else {
+      return prependGlobalHeader(encodePointCloudGrid());
+    }
 };
 
 bool PointCloudGridEncoder::decode(zmq::message_t &msg, PointCloud<Vec<float>, Vec<float>> *point_cloud)
@@ -60,6 +75,77 @@ bool PointCloudGridEncoder::decode(zmq::message_t &msg, std::vector<Uncompressed
     if(!decodePointCloudGrid(msg))
         return false;
     return extractPointCloudFromGrid(point_cloud);
+}
+
+zmq::message_t PointCloudGridEncoder::prependGlobalHeader(zmq::message_t msg) {
+  global_header_->entropy_coding = false;
+  global_header_->uncompressed_size = msg.size();
+
+  zmq::message_t out_msg(msg.size() + GlobalHeader::getByteSize());
+
+  int offset = encodeGlobalHeader(out_msg);
+
+  memcpy((unsigned char*) out_msg.data() + offset,
+     (unsigned char*) msg.data(), msg.size());
+
+  return out_msg;
+}
+
+zmq::message_t PointCloudGridEncoder::entropyCompression(zmq::message_t msg) {
+  global_header_->entropy_coding = true;
+  global_header_->uncompressed_size = msg.size();
+
+   unsigned long size_compressed = (msg.size() * 1.1) + 12;
+   unsigned char* entropy_compressed = (unsigned char*)malloc(size_compressed);
+   int z_result = compress(entropy_compressed, &size_compressed, (unsigned char*) msg.data(), msg.size());
+   switch( z_result )
+   {
+   case Z_OK:
+       printf("***** SUCCESS! *****\n");
+       break;
+
+   case Z_MEM_ERROR:
+       printf("out of memory\n");
+       exit(1);    // quit.
+       break;
+
+   case Z_BUF_ERROR:
+       printf("output buffer wasn't large enough!\n");
+       exit(1);    // quit.
+       break;
+   }
+
+   zmq::message_t out_msg(size_compressed + GlobalHeader::getByteSize());
+
+   int offset = encodeGlobalHeader(out_msg);
+
+   memcpy((unsigned char*) out_msg.data() + offset, entropy_compressed, size_compressed);
+
+   delete entropy_compressed;
+
+   return msg;
+}
+
+zmq::message_t PointCloudGridEncoder::entropyDecompression(zmq::message_t& msg, size_t offset) {
+  zmq::message_t msg_uncompressed(global_header_->uncompressed_size);
+  int z_result = uncompress((unsigned char*) msg_uncompressed.data(), &global_header_->uncompressed_size, (unsigned char*)msg.data() + offset, global_header_->uncompressed_size);
+  switch( z_result )
+  {
+  case Z_OK:
+      printf("***** SUCCESS! *****\n");
+      break;
+
+  case Z_MEM_ERROR:
+      printf("out of memory\n");
+      exit(1);    // quit.
+      break;
+
+  case Z_BUF_ERROR:
+      printf("output buffer wasn't large enough!\n");
+      exit(1);    // quit.
+      break;
+  }
+  return msg_uncompressed;
 }
 
 void PointCloudGridEncoder::buildPointCloudGrid(PointCloud<Vec<float>, Vec<float>>* point_cloud) {
@@ -174,10 +260,10 @@ void PointCloudGridEncoder::buildPointCloudGrid(const std::vector<UncompressedVo
         std::cout << "  > size " << num_points << std::endl;
     }
 
-    // discard overlapping points after quantization 
-    // and calc overall point color by incremental mean. 
+    // discard overlapping points after quantization
+    // and calc overall point color by incremental mean.
     // - not parallelized, thus slower.
-    // - reduces number of points in grid (compared to original) for increasing coarsity of abstraction  
+    // - reduces number of points in grid (compared to original) for increasing coarsity of abstraction
     if(settings.irrelevance_coding) {
         std::vector<PropertyMap> cell_prop_map(num_cells);
         PropertyMap::iterator it;
@@ -510,7 +596,7 @@ zmq::message_t PointCloudGridEncoder::encodePointCloudGrid() {
 
     zmq::message_t message(message_size_bytes);
 
-    size_t offset = encodeGlobalHeader(message);
+    size_t offset = encodeGridHeader(message);
     offset = encodeBlackList(message, black_list, offset);
 
     time_t pre_cells = m.stopWatch();
@@ -567,8 +653,18 @@ zmq::message_t PointCloudGridEncoder::encodePointCloudGrid() {
 
 bool PointCloudGridEncoder::decodePointCloudGrid(zmq::message_t& msg)
 {
+    size_t offset = decodeGlobalHeader(msg);
+
+    zmq::message_t decomp_msg(global_header_->uncompressed_size);
+
+    if(global_header_->entropy_coding){
+      decomp_msg = entropyDecompression(msg, offset);
+    } else {
+      memcpy((unsigned char*) decomp_msg.data(),(unsigned char*) msg.data() + offset, global_header_->uncompressed_size);
+    }
+
     size_t old_offset = 0;
-    size_t offset = decodeGlobalHeader(msg, 0);
+    offset = decodeGridHeader(decomp_msg, offset);
     if(offset == old_offset)
         return false;
 
@@ -576,7 +672,7 @@ bool PointCloudGridEncoder::decodePointCloudGrid(zmq::message_t& msg)
     pc_grid_->bounding_box = header_->bounding_box;
 
     std::vector<unsigned> black_list;
-    offset = decodeBlackList(msg, black_list, offset);
+    offset = decodeBlackList(decomp_msg, black_list, offset);
 
     std::set<unsigned> black_set;
     for(unsigned idx : black_list)
@@ -604,7 +700,7 @@ bool PointCloudGridEncoder::decodePointCloudGrid(zmq::message_t& msg)
         cell_headers[header_idx]->cell_idx = c_idx;
         if(header_idx == 0) {
             cell_offsets[header_idx] += offset;
-            cell_offsets[header_idx] = decodeCellHeader(msg, cell_headers[header_idx], cell_offsets[header_idx]);
+            cell_offsets[header_idx] = decodeCellHeader(decomp_msg, cell_headers[header_idx], cell_offsets[header_idx]);
             if(cell_offsets[header_idx] == old_offset) {
                 while(!cell_headers.empty()) {
                     delete cell_headers.back();
@@ -628,7 +724,7 @@ bool PointCloudGridEncoder::decodePointCloudGrid(zmq::message_t& msg)
                     cell_headers[header_idx-1]->color_encoding_z
             );
             old_offset = cell_offsets[header_idx];
-            cell_offsets[header_idx] = decodeCellHeader(msg, cell_headers[header_idx], cell_offsets[header_idx]);
+            cell_offsets[header_idx] = decodeCellHeader(decomp_msg, cell_headers[header_idx], cell_offsets[header_idx]);
             if(old_offset == cell_offsets[header_idx]) {
                 while(!cell_headers.empty()) {
                     delete cell_headers.back();
@@ -644,7 +740,7 @@ bool PointCloudGridEncoder::decodePointCloudGrid(zmq::message_t& msg)
 
     # pragma omp parallel for
     for(header_idx = 0; header_idx < cell_headers.size(); ++header_idx) {
-        if(cell_offsets[header_idx] == decodeCell(msg, cell_headers[header_idx], cell_offsets[header_idx])) {
+        if(cell_offsets[header_idx] == decodeCell(decomp_msg, cell_headers[header_idx], cell_offsets[header_idx])) {
             std::cout << "WARNING: No points in cell\n  > Cell should've been blacklisted.\n";
         }
     }
@@ -666,6 +762,33 @@ bool PointCloudGridEncoder::decodePointCloudGrid(zmq::message_t& msg)
 }
 
 size_t PointCloudGridEncoder::encodeGlobalHeader(zmq::message_t &msg, size_t offset) {
+    bool entropy_coding = new bool;
+    entropy_coding =  global_header_->entropy_coding;
+    memcpy((unsigned char*) msg.data() + offset,(unsigned char*) entropy_coding, sizeof(bool));
+    offset += sizeof(bool);
+
+    unsigned long uncompressed_size = global_header_->uncompressed_size;
+    memcpy((unsigned char*) msg.data() + offset, (unsigned char*) uncompressed_size, sizeof(unsigned long));
+    offset += sizeof(unsigned long);
+
+    return offset;
+}
+
+size_t PointCloudGridEncoder::decodeGlobalHeader(zmq::message_t &msg, size_t offset) {
+    bool entropy_coding = new bool;
+    memcpy((unsigned char*) entropy_coding, (unsigned char*) msg.data() + offset, sizeof(bool));
+    global_header_->entropy_coding = entropy_coding;
+    offset += sizeof(bool);
+
+    unsigned long uncompressed_size;
+    memcpy((unsigned char*) uncompressed_size, (unsigned char*) msg.data() + offset, sizeof(unsigned long));
+    global_header_->uncompressed_size = uncompressed_size;
+    offset += sizeof(unsigned long);
+
+    return offset;
+}
+
+size_t PointCloudGridEncoder::encodeGridHeader(zmq::message_t &msg, size_t offset) {
     auto dim = new unsigned char[3];
     size_t bytes_dim_size(3 * sizeof(unsigned char));
     dim[0] = header_->dimensions.x;
@@ -699,7 +822,7 @@ size_t PointCloudGridEncoder::encodeGlobalHeader(zmq::message_t &msg, size_t off
     return offset;
 }
 
-size_t PointCloudGridEncoder::decodeGlobalHeader(zmq::message_t& msg, size_t offset)
+size_t PointCloudGridEncoder::decodeGridHeader(zmq::message_t& msg, size_t offset)
 {
     auto dim = new unsigned char[3];
     size_t bytes_dim_size(3 * sizeof(unsigned char));
@@ -942,9 +1065,14 @@ const Vec<float> PointCloudGridEncoder::mapToCell(const float pos[3], const Vec<
 }
 
 size_t PointCloudGridEncoder::calcMessageSize(const std::vector<CellHeader *> & cell_headers) const {
-    size_t header_size = GlobalHeader::getByteSize();
+    // global header size
+    size_t global_header_size = GlobalHeader::getByteSize();
+    // message size
+    size_t message_size = global_header_size;
     // header size
-    size_t message_size = header_size;
+    size_t header_size = GridHeader::getByteSize();
+    message_size += header_size;
+
     // blacklist size
     size_t blacklist_size = header_->num_blacklist*sizeof(unsigned);
     message_size += blacklist_size;
@@ -978,8 +1106,6 @@ size_t PointCloudGridEncoder::calcMessageSize(const std::vector<CellHeader *> & 
         std::cout << "CELLS\n";
         std::cout << " > ELEMENT COUNT " << num_elements << std::endl;
     }
-    
+
     return message_size;
 }
-
-
