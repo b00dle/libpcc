@@ -92,62 +92,74 @@ zmq::message_t PointCloudGridEncoder::prependGlobalHeader(zmq::message_t msg) {
 }
 
 zmq::message_t PointCloudGridEncoder::entropyCompression(zmq::message_t msg) {
-  global_header_->entropy_coding = true;
-  global_header_->uncompressed_size = msg.size();
+    Measure t;
+    t.startWatch();
+    global_header_->entropy_coding = true;
+    global_header_->uncompressed_size = msg.size();
 
-   unsigned long size_compressed = (msg.size() * 1.1) + 12;
-   unsigned char* entropy_compressed = (unsigned char*)malloc(size_compressed);
-   int z_result = compress(entropy_compressed, &size_compressed, (unsigned char*) msg.data(), msg.size());
-   switch( z_result )
-   {
-   case Z_OK:
-       printf("***** SUCCESS! *****\n");
-       break;
+    unsigned long size_compressed = (msg.size() * 1.1) + 12;
+    unsigned char* entropy_compressed = (unsigned char*)malloc(size_compressed);
+    int z_result = compress(entropy_compressed, &size_compressed, (unsigned char*) msg.data(), msg.size());
+    switch( z_result )
+    {
+    case Z_OK:
+        /*if(settings.verbose)
+            printf("***** SUCCESS! *****\n");*/
+        break;
 
-   case Z_MEM_ERROR:
-       printf("out of memory\n");
-       exit(1);    // quit.
-       break;
+    case Z_MEM_ERROR:
+        printf("FAILURE [zlib]: out of memory.\n  > Exiting.");
+        exit(1);    // quit.
+        break;
 
-   case Z_BUF_ERROR:
-       printf("output buffer wasn't large enough!\n");
-       exit(1);    // quit.
-       break;
-   }
+    case Z_BUF_ERROR:
+        printf("FAILURE [zlib]: output buffer wasn't large enough!\n  > Exiting.");
+        exit(1);    // quit.
+        break;
+    }
 
-   zmq::message_t out_msg(size_compressed + GlobalHeader::getByteSize());
-   std::cout << " >> uncompressed Size " << msg.size() << std::endl;
-   std::cout << " >> entropy Compression out msg size " << out_msg.size() << std::endl;
+    zmq::message_t out_msg(size_compressed + GlobalHeader::getByteSize());
+    int offset = encodeGlobalHeader(out_msg);
+    memcpy((unsigned char*) out_msg.data() + offset, entropy_compressed, size_compressed);
 
-   int offset = encodeGlobalHeader(out_msg);
-   memcpy((unsigned char*) out_msg.data() + offset, entropy_compressed, size_compressed);
-
-   delete entropy_compressed;
-   std::cout << "entropyCompression finished" << std::endl;
-   return out_msg;
+    delete entropy_compressed;
+    if(settings.verbose) {
+        std::cout << "ENTROPY COMPRESSION done." << std::endl;
+        std::cout << "  > took " << t.stopWatch() << "ms." << std::endl;
+        std::cout << "  > uncompressed byte size " << msg.size() << std::endl;
+        std::cout << "  > compressed byte size " << out_msg.size() << std::endl;
+    }
+    return out_msg;
 }
 
 zmq::message_t PointCloudGridEncoder::entropyDecompression(zmq::message_t& msg, size_t offset) {
-  zmq::message_t msg_uncompressed(global_header_->uncompressed_size);
-  int z_result = uncompress((unsigned char*) msg_uncompressed.data(), &global_header_->uncompressed_size, (unsigned char*)msg.data() + offset, global_header_->uncompressed_size);
-  switch( z_result )
-  {
-  case Z_OK:
-      printf("***** SUCCESS! *****\n");
-      break;
+    Measure t;
+    t.startWatch();
+    zmq::message_t msg_uncompressed(global_header_->uncompressed_size);
+    int z_result = uncompress((unsigned char*) msg_uncompressed.data(), &global_header_->uncompressed_size, (unsigned char*)msg.data() + offset, global_header_->uncompressed_size);
+    switch( z_result )
+    {
+    case Z_OK:
+        /*if(settings.verbose)
+            printf("***** SUCCESS! *****\n");*/
+        break;
 
-  case Z_MEM_ERROR:
-      printf("out of memory\n");
-      exit(1);    // quit.
-      break;
+    case Z_MEM_ERROR:
+        printf("FAILURE [zlib]: out of memory.\n  > Exiting.");
+        exit(1);    // quit.
+        break;
 
-  case Z_BUF_ERROR:
-      printf("output buffer wasn't large enough!\n");
-      exit(1);    // quit.
-      break;
-  }
-  std::cout << " >> entropy decompression done " << std::endl;
-  return msg_uncompressed;
+    case Z_BUF_ERROR:
+        printf("FAILURE [zlib]: output buffer wasn't large enough!\n  > Exiting.");
+        exit(1);    // quit.
+        break;
+    }
+
+    if(settings.verbose) {
+        std::cout << "ENTROPY DECOMPRESSION done." << std::endl;
+        std::cout << "  > took " << t.stopWatch() << "ms." << std::endl;
+    }
+    return msg_uncompressed;
 }
 
 void PointCloudGridEncoder::buildPointCloudGrid(PointCloud<Vec<float>, Vec<float>>* point_cloud) {
@@ -311,6 +323,7 @@ void PointCloudGridEncoder::buildPointCloudGrid(const std::vector<UncompressedVo
 
         if(settings.verbose) {
             std::cout << "POINTS DISCARDED \n";
+            std::cout << "  > took " << t.stopWatch() << "ms." << std::endl;
             std::cout << "  > BoundingBox " << discarded_by_bb << std::endl;
             std::cout << "  > Quantization " << discarded_by_cell<< std::endl;
             std::cout << "  > " << num_points - discarded_by_bb - discarded_by_cell << " voxels left.\n";
@@ -658,19 +671,13 @@ bool PointCloudGridEncoder::decodePointCloudGrid(zmq::message_t& msg)
     size_t offset = decodeGlobalHeader(msg);
 
 
-    std::cout << "initialize decompressed msg" << std::endl;
-    std::cout << " size uncompressed " << global_header_->uncompressed_size << std::endl;
     zmq::message_t decomp_msg(global_header_->uncompressed_size);
-    std::cout << "initialize successful" << std::endl;
-
+    
     if(global_header_->entropy_coding){
       decomp_msg = entropyDecompression(msg, offset);
     } else {
-      std::cout << "Memcpy decodePointCloudGrid" << std::endl;
       memcpy((unsigned char*) decomp_msg.data(),(unsigned char*) msg.data() + offset, global_header_->uncompressed_size);
-      std::cout << "Memcpy decodePointCloudGrid done" << std::endl;
     }
-    std::cout << "decompression finished" << std::endl;
     size_t old_offset = 0;
     offset = 0;
     offset = decodeGridHeader(decomp_msg, offset);
@@ -771,42 +778,37 @@ bool PointCloudGridEncoder::decodePointCloudGrid(zmq::message_t& msg)
 }
 
 size_t PointCloudGridEncoder::encodeGlobalHeader(zmq::message_t &msg, size_t offset) {
-    auto entropy_code = new bool[1];
-    entropy_code[0] = global_header_->entropy_coding;
+    auto entropy_coding = new bool[1];
+    entropy_coding[0] = global_header_->entropy_coding;
     size_t bytes_entropy(sizeof(unsigned char));
-    std::cout << "Memcpy globalHeader 1" << std::endl;
-    memcpy((unsigned char*) msg.data() + offset,(unsigned char*) entropy_code, sizeof(bool));
-    std::cout << "Memcpy globalHeader 1 done" << std::endl;
+    memcpy((unsigned char*) msg.data() + offset,(unsigned char*) entropy_coding, sizeof(bool));
     offset += sizeof(bool);
 
     auto uncompressed_size = new unsigned long[1];
     uncompressed_size[0] = global_header_->uncompressed_size;
-    std::cout << "Memcpy globalHeader 2" << std::endl;
-    std::cout << "uncompressed_size " << global_header_->uncompressed_size << std::endl;
     memcpy((unsigned char*) msg.data() + offset, (unsigned char*) uncompressed_size, sizeof(unsigned long));
-    std::cout << "Memcpy globalHeader 2 done" << std::endl;
     offset += sizeof(unsigned long);
 
+    // cleanup
+    delete [] entropy_coding;
+    delete [] uncompressed_size;
     return offset;
 }
 
 size_t PointCloudGridEncoder::decodeGlobalHeader(zmq::message_t &msg, size_t offset) {
     auto entropy_coding = new bool[1];
-    std::cout << "memcpy 1 decoding" << std::endl;
-    std::cout << "offset " << offset << std::endl;
     memcpy((unsigned char*) entropy_coding, (unsigned char*) msg.data() + offset, sizeof(bool));
-    std::cout << "memcpy 1 decoding finished" << std::endl;
     global_header_->entropy_coding = entropy_coding[0];
-    std::cout << "entropy_coding " << entropy_coding[0] << std::endl;
     offset += sizeof(bool);
 
     auto uncompressed_size = new unsigned long[1];
-    std::cout << "memcpy 2 decoding" << std::endl;
     memcpy((unsigned char*) uncompressed_size, (unsigned char*) msg.data() + offset, sizeof(unsigned long));
-    std::cout << "memcpy 2 decoding finished" << std::endl;
     global_header_->uncompressed_size = uncompressed_size[0];
     offset += sizeof(unsigned long);
 
+    // cleanup
+    delete [] entropy_coding;
+    delete [] uncompressed_size;
     return offset;
 }
 
