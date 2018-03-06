@@ -96,6 +96,7 @@ int main(int argc, char* argv[]){
             Vec<BitCount>(BIT_8,BIT_8,BIT_8), // default point encoding
             Vec<BitCount>(BIT_8,BIT_8,BIT_8)  // default color encoding
     );
+    encoder.settings.entropy_coding = true;
 
     // READ RAW DATA FROM FILE
     std::vector<UncompressedVoxel> v_raw;
@@ -113,6 +114,15 @@ int main(int argc, char* argv[]){
 
 
     Measure t;
+    zmq::message_t msg_v_raw = encoder.encode(v_raw);
+    std::cout << "vraw size after encoding " << msg_v_raw.size() << std::endl;
+    std::cout << "encoding finished" << std::endl;
+    std::vector<UncompressedVoxel> msg_v_final;
+    std::cout << "begin decoding" << std::endl;
+    encoder.decode(msg_v_raw, &msg_v_final);
+    std::cout << "decoding finished" << std::endl;
+
+
 
     // float avg_clr[4] = {0.0f,0.0f,0.0f,0.0f};
     // float avg_pos[3] = {0.0f,0.0f,0.0f};
@@ -160,70 +170,72 @@ int main(int argc, char* argv[]){
     // std::cout << "DECODED message (encoded using raw voxels)\n";
     // std::cout << "  > voxel count " << msg_v_final.size() << std::endl;
 
-    zmq::message_t msg_v_raw = encoder.encode(v_raw);
-    unsigned long sizeDataCompressed  = (msg_v_raw.size() * 1.1) + 12;
-    unsigned char* dataCompressed = (unsigned char*)malloc(sizeDataCompressed);
 
-    std::cout << "before compress size " << msg_v_raw.size() << std::endl;
-    std::cout << "before compress size (+ upscale for zlib) " << sizeDataCompressed << std::endl;
-    t.startWatch();
-    int z_result = compress(dataCompressed, &sizeDataCompressed, (unsigned char*) msg_v_raw.data(), msg_v_raw.size());
-    std::cout << "Compression took: " << t.stopWatch() << " ms" << std::endl;
-    std::cout << "after compress size " << sizeDataCompressed << std::endl;
-
-    switch( z_result )
-    {
-    case Z_OK:
-        printf("***** SUCCESS! *****\n");
-        break;
-
-    case Z_MEM_ERROR:
-        printf("out of memory\n");
-        exit(1);    // quit.
-        break;
-
-    case Z_BUF_ERROR:
-        printf("output buffer wasn't large enough!\n");
-        exit(1);    // quit.
-        break;
-    }
-    zmq::message_t msg_v_compressed(sizeDataCompressed);
-    std::cout << "msg_compressed size " << msg_v_compressed.size() << std::endl;
-    memcpy((unsigned char*) msg_v_compressed.data(), (const unsigned char*) dataCompressed, sizeDataCompressed);
-    std::cout << "msg_compressed size " << msg_v_compressed.size() << std::endl;
-
-    unsigned long sizeDataUncompressed = msg_v_raw.size();
-    zmq::message_t msg_v_uncompressed(sizeDataUncompressed);
-
-    std::cout << "before uncompress (set to raw msg size) " << sizeDataUncompressed << std::endl;
-    t.startWatch();
-    z_result = uncompress((unsigned char*) msg_v_uncompressed.data(), &sizeDataUncompressed, (unsigned char*) msg_v_compressed.data(), msg_v_compressed.size());
-    std::cout << "Uncompression took: " << t.stopWatch() << " ms" << std::endl;
-    std::cout << "after uncompress " << sizeDataUncompressed << std::endl;
-
-
-    switch( z_result )
-    {
-    case Z_OK:
-        printf("***** SUCCESS! *****\n");
-        break;
-
-    case Z_MEM_ERROR:
-        printf("out of memory\n");
-        exit(1);    // quit.
-        break;
-
-    case Z_BUF_ERROR:
-        printf("output buffer wasn't large enough!\n");
-        exit(1);    // quit.
-        break;
-    }
-
-    std::vector<UncompressedVoxel> msg_v_final;
-    encoder.decode(msg_v_uncompressed, &msg_v_final);
-    std::cout << "DECODED message (encoded using raw voxels)\n";
-    std::cout << "  > voxel count " << msg_v_final.size() << std::endl;
-
+    //---------------------------------------------------------------------------------------------------------------------------------
+    // zmq::message_t msg_v_raw = encoder.encode(v_raw);
+    // unsigned long sizeDataCompressed  = (msg_v_raw.size() * 1.1) + 12;
+    // unsigned char* dataCompressed = (unsigned char*)malloc(sizeDataCompressed);
+    //
+    // std::cout << "before compress size " << msg_v_raw.size() << std::endl;
+    // std::cout << "before compress size (+ upscale for zlib) " << sizeDataCompressed << std::endl;
+    // t.startWatch();
+    // int z_result = compress(dataCompressed, &sizeDataCompressed, (unsigned char*) msg_v_raw.data(), msg_v_raw.size());
+    // std::cout << "Compression took: " << t.stopWatch() << " ms" << std::endl;
+    // std::cout << "after compress size " << sizeDataCompressed << std::endl;
+    //
+    // switch( z_result )
+    // {
+    // case Z_OK:
+    //     printf("***** SUCCESS! *****\n");
+    //     break;
+    //
+    // case Z_MEM_ERROR:
+    //     printf("out of memory\n");
+    //     exit(1);    // quit.
+    //     break;
+    //
+    // case Z_BUF_ERROR:
+    //     printf("output buffer wasn't large enough!\n");
+    //     exit(1);    // quit.
+    //     break;
+    // }
+    // zmq::message_t msg_v_compressed(sizeDataCompressed);
+    // std::cout << "msg_compressed size " << msg_v_compressed.size() << std::endl;
+    // memcpy((unsigned char*) msg_v_compressed.data(), (const unsigned char*) dataCompressed, sizeDataCompressed);
+    // std::cout << "msg_compressed size " << msg_v_compressed.size() << std::endl;
+    //
+    // unsigned long sizeDataUncompressed = msg_v_raw.size();
+    // zmq::message_t msg_v_uncompressed(sizeDataUncompressed);
+    //
+    // std::cout << "before uncompress (set to raw msg size) " << sizeDataUncompressed << std::endl;
+    // t.startWatch();
+    // z_result = uncompress((unsigned char*) msg_v_uncompressed.data(), &sizeDataUncompressed, (unsigned char*) msg_v_compressed.data(), msg_v_compressed.size());
+    // std::cout << "Uncompression took: " << t.stopWatch() << " ms" << std::endl;
+    // std::cout << "after uncompress " << sizeDataUncompressed << std::endl;
+    //
+    //
+    // switch( z_result )
+    // {
+    // case Z_OK:
+    //     printf("***** SUCCESS! *****\n");
+    //     break;
+    //
+    // case Z_MEM_ERROR:
+    //     printf("out of memory\n");
+    //     exit(1);    // quit.
+    //     break;
+    //
+    // case Z_BUF_ERROR:
+    //     printf("output buffer wasn't large enough!\n");
+    //     exit(1);    // quit.
+    //     break;
+    // }
+    //
+    // std::vector<UncompressedVoxel> msg_v_final;
+    // encoder.decode(msg_v_uncompressed, &msg_v_final);
+    // std::cout << "DECODED message (encoded using raw voxels)\n";
+    // std::cout << "  > voxel count " << msg_v_final.size() << std::endl;
+    //---------------------------------------------------------------------------------------------------------------------------------
 
     // std::vector<UncompressedVoxel> msg_v_raw_decoded;
     // encoder.decode(msg_v_raw, &msg_v_raw_decoded);
