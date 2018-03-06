@@ -98,7 +98,8 @@ zmq::message_t PointCloudGridEncoder::entropyCompression(zmq::message_t msg) {
     global_header_->uncompressed_size = msg.size();
 
     unsigned long size_compressed = (msg.size() * 1.1) + 12;
-    unsigned char* entropy_compressed = (unsigned char*) malloc(size_compressed);
+    unsigned char* entropy_compressed = new unsigned char[size_compressed];//(unsigned char*) malloc(size_compressed);
+
     int z_result = compress(entropy_compressed, &size_compressed, (unsigned char*) msg.data(), msg.size());
     switch( z_result )
     {
