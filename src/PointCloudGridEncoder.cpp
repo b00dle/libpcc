@@ -98,7 +98,7 @@ zmq::message_t PointCloudGridEncoder::entropyCompression(zmq::message_t msg) {
     global_header_->uncompressed_size = msg.size();
 
     unsigned long size_compressed = (msg.size() * 1.1) + 12;
-    unsigned char* entropy_compressed = (unsigned char*)malloc(size_compressed);
+    unsigned char* entropy_compressed = (unsigned char*) malloc(size_compressed);
     int z_result = compress(entropy_compressed, &size_compressed, (unsigned char*) msg.data(), msg.size());
     switch( z_result )
     {
@@ -122,7 +122,7 @@ zmq::message_t PointCloudGridEncoder::entropyCompression(zmq::message_t msg) {
     int offset = encodeGlobalHeader(out_msg);
     memcpy((unsigned char*) out_msg.data() + offset, entropy_compressed, size_compressed);
 
-    delete entropy_compressed;
+    delete [] entropy_compressed;
     if(settings.verbose) {
         std::cout << "ENTROPY COMPRESSION done." << std::endl;
         std::cout << "  > took " << t.stopWatch() << "ms." << std::endl;
