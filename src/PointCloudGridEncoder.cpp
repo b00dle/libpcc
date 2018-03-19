@@ -77,6 +77,11 @@ bool PointCloudGridEncoder::decode(zmq::message_t &msg, std::vector<Uncompressed
     return extractPointCloudFromGrid(point_cloud);
 }
 
+const PointCloudGrid* PointCloudGridEncoder::getPointCloudGrid() const
+{
+    return pc_grid_;
+}
+
 zmq::message_t PointCloudGridEncoder::prependGlobalHeader(zmq::message_t msg) {
   global_header_->entropy_coding = false;
   global_header_->uncompressed_size = msg.size();
