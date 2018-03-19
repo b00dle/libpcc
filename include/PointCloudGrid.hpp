@@ -86,20 +86,20 @@ struct PointCloudGrid {
         return cells[cell_idx];
     }
 
-    Vec<float> const getQuantizationStepSize(int cell_idx) const 
+    Vec<float> const getQuantizationStepSize(int cell_idx) const
     {
         if(cell_idx >= cells.size() || cell_idx < 0) {
             std::cout << "NOTIFICATION: invalid cell_idx for call to getQuantizationStepSize" << std::endl;
             std::cout << "  > got:" << cell_idx;
             std::cout << "  > valid range: [0," << cells.size()-1 << "]." << std::endl;
         }
-        
+
         Vec<int> num_quant_values(
-            pow(2, cells[cell_idx]->points.getNX()), 
-            pow(2, cells[cell_idx]->points.getNY()), 
-            pow(2, cells[cell_idx]->points.getNZ())
-        );  
-        
+            pow(2, static_cast<int>(cells[cell_idx]->points.getNX())),
+            pow(2, static_cast<int>(cells[cell_idx]->points.getNY())),
+            pow(2, static_cast<int>(cells[cell_idx]->points.getNZ()))
+        );
+
         Vec<float> quant_step;
         quant_step.x = ((bounding_box.max.x-bounding_box.min.x) / dimensions.x) / num_quant_values.x;
         quant_step.y = ((bounding_box.max.y-bounding_box.min.y) / dimensions.y) / num_quant_values.y;
