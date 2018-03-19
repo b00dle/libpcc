@@ -23,7 +23,8 @@ int main(int argc, char* argv[]){
     socket.bind(endpoint.c_str());
     */
 
-    std::vector<std::string> files;
+    //________________________________________________________________________
+    /*std::vector<std::string> files;
     files.push_back("./snap-8-6-4de.txt");
     files.push_back("./snap-8-7-6de.txt");
     files.push_back("./snap-16-8-8de.txt");
@@ -46,7 +47,7 @@ int main(int argc, char* argv[]){
     files.push_back("./snap-16-8-3de.txt");
     files.push_back("./snap-8-16-8de.txt");
     files.push_back("./snap-8-32-8de.txt");
-
+*/
     PointCloudGridEncoder encoder;
     BoundingBox bb(Vec<float>(-1.0f, 0.0f, -1.0f), Vec<float>(1.0f, 2.2f, 1.0f));
     encoder.settings.grid_precision = GridPrecisionDescriptor(
@@ -55,7 +56,7 @@ int main(int argc, char* argv[]){
             Vec<BitCount>(BIT_8,BIT_8,BIT_8),
             Vec<BitCount>(BIT_8,BIT_8,BIT_8)
     );
-
+/*
     std::vector<UncompressedVoxel> v_raw;
     BinaryFile raw;
     if(raw.read("./clean.txt")) {
@@ -86,7 +87,7 @@ int main(int argc, char* argv[]){
         for(auto voxel : v_raw) {
             pc.points.push_back(Vec<float>(voxel.pos[0],voxel.pos[1],voxel.pos[2]));
             pc.colors.push_back(Vec<float>(((float)voxel.color_rgba[1]) / 255.0f, ((float) voxel.color_rgba[2]) / 255.0f, ((float) voxel.color_rgba[3]) / 255.0f));
-            //std::cout << voxel.pos[0] << ", " << voxel.pos[1] << ", " << voxel.pos[2] << std::endl; 
+            //std::cout << voxel.pos[0] << ", " << voxel.pos[1] << ", " << voxel.pos[2] << std::endl;
             //std::cout << ((int)voxel.color_rgba[1]) << ", " << ((int)voxel.color_rgba[2]) << ", " << ((int)voxel.color_rgba[1])<< std::endl;
         }
         v_dec[0].pos; // float[3]
@@ -96,13 +97,6 @@ int main(int argc, char* argv[]){
             pc2.points.push_back(Vec<float>(voxel.pos[0],voxel.pos[1],voxel.pos[2]));
             pc2.colors.push_back(Vec<float>(((float)voxel.color_rgba[1]) / 255.0f, ((float) voxel.color_rgba[2]) / 255.0f, ((float) voxel.color_rgba[3]) / 255.0f));
         }
-        PointCloud<Vec<float>, Vec<float>> pc3;
-        pc2.points.push_back(Vec<float>(1.0f, 2.0f, 3.0f));
-        pc2.colors.push_back(Vec<float>(0.0f, 0.0f, 0.0f));
-
-        PointCloud<Vec<float>, Vec<float>> pc4;
-        pc3.points.push_back(Vec<float>(1.0f, 2.0f, 3.0f));
-        pc3.colors.push_back(Vec<float>(0.0f, 0.0f, 0.0f));
 
         Measure m;
         std::vector<float> results = m.comparePC(pc, pc2, bb);
@@ -112,7 +106,136 @@ int main(int argc, char* argv[]){
         std::cout << results[2] << ", ";
         std::cout << results[3] << ", ";
         std::cout << results[5] << std::endl;
+    }*/
+
+    std::vector<UncompressedVoxel> v_raw_pic;
+    std::cout << "Read raw Data from Picture based approach" << std::endl;
+    BinaryFile raw_pic;
+    if(raw_pic.read("./raw_data.txt")) {
+        v_raw_pic.resize(raw_pic.getSize() / sizeof(UncompressedVoxel));
+        raw_pic.copy((char*) v_raw_pic.data());
+        std::cout << "READ raw voxels from file done.\n";
     }
+    else {
+        std::cout << "READ raw voxels from file failed.\n";
+    }
+    std::cout << "RAW VOXEL data (parsed from file) \n";
+    std::cout << "  > voxel count " << v_raw_pic.size() << std::endl;
+
+    PointCloud<Vec<float>, Vec<float>> pc_raw_pic(BoundingBox(Vec<float>(-1.01f,-1.01f,-1.01f), Vec<float>(1.01f,1.01f,1.01f)));
+int count = 0;
+    for(auto index : v_raw_pic) {
+      pc_raw_pic.points.emplace_back(index.pos[0], index.pos[1], index.pos[2]);
+      pc_raw_pic.colors.emplace_back(((float) index.color_rgba[0]) / 255.0f, ((float) index.color_rgba[0]) / 255.0f, ((float) index.color_rgba[0]) / 255.0f);
+
+      if(count < 10) {
+        std::cout << "PC Color check: " <<(float) index.color_rgba[0] << ", " <<(float) index.color_rgba[1] << ", " <<(float) index.color_rgba[2] << ", " << index.color_rgba[3] << std::endl;
+        std::cout << "PC Pos check: " << index.pos[0] << ", " << index.pos[1] << ", " << index.pos[2] << std::endl;
+        count++;
+      }
+    }
+
+    zmq::message_t msg_raw_pic = encoder.encode(v_raw_pic);
+    std::vector<UncompressedVoxel> msg_decoded_pic;
+    encoder.decode(msg_raw_pic, & msg_decoded_pic);
+
+    PointCloud<Vec<float>, Vec<float>> pc_pcc(BoundingBox(Vec<float>(-1.01f,-1.01f,-1.01f), Vec<float>(1.01f,1.01f,1.01f)));
+
+    for(auto index : msg_decoded_pic) {
+      pc_pcc.points.emplace_back(index.pos[0], index.pos[1], index.pos[2]);
+      pc_pcc.colors.emplace_back(((float) index.color_rgba[0]) / 255.0f, ((float) index.color_rgba[0]) / 255.0f, ((float) index.color_rgba[0]) / 255.0f);
+    }
+
+    std::vector<UncompressedVoxel> v_comp_pic;
+    std::cout << "Read raw Data from Picture based approach" << std::endl;
+    BinaryFile comp_pic;
+    if(comp_pic.read("./comp_nint.txt")) {
+        v_comp_pic.resize(comp_pic.getSize() / sizeof(UncompressedVoxel));
+        comp_pic.copy((char*) v_comp_pic.data());
+        std::cout << "READ raw voxels from file done.\n";
+    }
+    else {
+        std::cout << "READ raw voxels from file failed.\n";
+    }
+    std::cout << "RAW VOXEL data (parsed from file) \n";
+    std::cout << "  > voxel count " << v_comp_pic.size() << std::endl;
+
+    PointCloud<Vec<float>, Vec<float>> pc_comp_pic(BoundingBox(Vec<float>(-1.01f,-1.01f,-1.01f), Vec<float>(1.01f,1.01f,1.01f)));
+
+    for(auto index : v_comp_pic) {
+      pc_comp_pic.points.emplace_back(index.pos[0], index.pos[1], index.pos[2]);
+      pc_comp_pic.colors.emplace_back(((float) index.color_rgba[0]) / 255.0f, ((float) index.color_rgba[1]) / 255.0f, ((float) index.color_rgba[2]) / 255.0f);
+      // std::cout << "PC Color check: " <<(float) index.color_rgba[0] << ", " <<(float) index.color_rgba[1] << ", " <<(float) index.color_rgba[2] << ", " << index.color_rgba[3] << std::endl;
+      // std::cout << "PC Pos check: " << index.pos[0] << ", " << index.pos[1] << ", " << index.pos[2] << std::endl;
+    }
+
+    std::vector<UncompressedVoxel> v_comp_int_pic;
+    std::cout << "Read raw Data from Picture based approach" << std::endl;
+    BinaryFile comp_int_pic;
+    if(comp_int_pic.read("./comp_int.txt")) {
+        v_comp_int_pic.resize(comp_int_pic.getSize() / sizeof(UncompressedVoxel));
+        comp_int_pic.copy((char*) v_comp_int_pic.data());
+        std::cout << "READ raw voxels from file done.\n";
+    }
+    else {
+        std::cout << "READ raw voxels from file failed.\n";
+    }
+    std::cout << "RAW VOXEL data (parsed from file) \n";
+    std::cout << "  > voxel count " << v_comp_int_pic.size() << std::endl;
+
+    PointCloud<Vec<float>, Vec<float>> pc_comp_int_pic(BoundingBox(Vec<float>(-1.01f,-1.01f,-1.01f), Vec<float>(1.01f,1.01f,1.01f)));
+count = 0;
+    for(auto index : v_comp_int_pic) {
+      pc_comp_pic.points.emplace_back(index.pos[0], index.pos[1], index.pos[2]);
+      pc_comp_pic.colors.emplace_back(((float) index.color_rgba[0]) / 255.0f,((float) index.color_rgba[0]) / 255.0f, ((float) index.color_rgba[0]) / 255.0f);
+      if(count < 10) {
+        std::cout << "PC Color check: " <<(float) index.color_rgba[0] << ", " <<(float) index.color_rgba[1] << ", " <<(float) index.color_rgba[2] << ", " << index.color_rgba[3] << std::endl;
+        std::cout << "PC Pos check: " << index.pos[0] << ", " << index.pos[1] << ", " << index.pos[2] << std::endl;
+        count++;
+      }
+    }
+
+    std::cout << "comp size (without interframe): " << v_comp_pic.size() << " / " << v_comp_pic.size() / sizeof(UncompressedVoxel) << std::endl;
+    std::cout << "comp size (with interframe): " << v_comp_int_pic.size() << " / " << v_comp_int_pic.size() / sizeof(UncompressedVoxel) << std::endl;
+    std::cout << "comp size (with pcc): " << msg_decoded_pic.size() << " / " << msg_decoded_pic.size() / sizeof(UncompressedVoxel) << std::endl;
+    std::cout << "comp raw size: " << v_raw_pic.size() << " / " << v_raw_pic.size() / sizeof(UncompressedVoxel) << std::endl;
+
+    Measure t;
+    std::vector<float> pic_nint = t.comparePC(pc_raw_pic, pc_comp_pic, bb);
+    std::vector<float> pic_int = t.comparePC(pc_raw_pic, pc_comp_int_pic, bb);
+    std::vector<float> pic_pc = t.comparePC(pc_raw_pic, pc_pcc, bb);
+    std::vector<float> pc_pic = t.comparePC(pc_pcc, pc_raw_pic, bb);
+
+
+
+    std::cout << "avg Error" << ", ";
+    std::cout << "max Error" << ", ";
+    std::cout << "avg ClrError" << ", ";
+    std::cout << "max ClrError" << std::endl;
+    std::cout << "Results for Pic with itself without interframe" << std::endl;
+    std::cout << pic_nint[0] << ", ";
+    std::cout << pic_nint[2] << ", ";
+    std::cout << pic_nint[3] << ", ";
+    std::cout << pic_nint[5] << std::endl;
+    std::cout << std::endl;
+
+    std::cout << "Results for Pic with itself with interframe" << std::endl;
+    std::cout << pic_int[0] << ", ";
+    std::cout << pic_int[2] << ", ";
+    std::cout << pic_int[3] << ", ";
+    std::cout << pic_int[5] << std::endl;
+    std::cout << std::endl;
+
+    std::cout << "Results for Pic with PC" << std::endl;
+    std::cout << pic_pc[0] << ", ";
+    std::cout << pic_pc[2] << ", ";
+    std::cout << pic_pc[3] << ", ";
+    std::cout << pic_pc[5] << std::endl;
+    std::cout << pc_pic[0] << ", ";
+    std::cout << pc_pic[2] << ", ";
+    std::cout << pc_pic[3] << ", ";
+    std::cout << pc_pic[5] << std::endl;
+
 
     //m.printResultsPC(results);
 
