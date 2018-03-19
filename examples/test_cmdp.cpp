@@ -98,6 +98,10 @@ int main(int argc, char* argv[]){
     );
     encoder.settings.entropy_coding = true;
 
+    std::cout << "TEST QUANT SIZE" << std::endl;
+    std::cout << "  > " << encoder.settings.getQuantizationStepSize(0) << std::endl;
+
+
     // READ RAW DATA FROM FILE
     std::vector<UncompressedVoxel> v_raw;
     BinaryFile raw;
@@ -115,12 +119,16 @@ int main(int argc, char* argv[]){
 
     Measure t;
     zmq::message_t msg_v_raw = encoder.encode(v_raw);
+    std::cout << "TEST QUANT SIZE AFTER ENCODE (on grid)" << std::endl;
+    std::cout << "  > " << encoder.getPointCloudGrid()->getQuantizationStepSize(0) << std::endl;
     std::cout << "vraw size after encoding " << msg_v_raw.size() << std::endl;
     std::cout << "encoding finished" << std::endl;
     std::vector<UncompressedVoxel> msg_v_final;
     std::cout << "begin decoding" << std::endl;
     encoder.decode(msg_v_raw, &msg_v_final);
     std::cout << "decoding finished" << std::endl;
+    std::cout << "TEST QUANT SIZE AFTER DECODE (on grid)" << std::endl;
+    std::cout << "  > " << encoder.getPointCloudGrid()->getQuantizationStepSize(0) << std::endl;
 
 
 

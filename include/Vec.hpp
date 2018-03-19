@@ -73,6 +73,17 @@ struct Vec {
         return hash() < rhs.hash();
     }
 
+    friend std::ostream& operator<< (std::ostream &out, const Vec<C>& rhs) 
+    {
+        out << "[" << /*(float)*/ rhs.x << "," << /*(float)*/ rhs.y << "," << /*(float)*/ rhs.z << "]";
+        return out;
+    }
+
+    /*std::ostream& operator<<(std::ostream& stream, const Vec<C>& rhs) {
+        stream << "[" << rhs.x << "," << rhs.y << "," << rhs.z << "," << "]";
+        return stream;
+    }*/
+
     C x;
     C y;
     C z;
@@ -111,6 +122,10 @@ struct Vec8 : Vec<uint8_t> {
         return x == rhs.x &&
                y == rhs.y &&
                z == rhs.z;
+    }
+
+    bool operator!=(const Vec8& rhs) const {
+        return !(*this == rhs);
     }
 };
 
