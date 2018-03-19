@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <cstdlib>
+#include <iostream>
 
 /*
  * Template Class to encapsulate 3 component Vector
@@ -50,6 +51,39 @@ struct Vec {
         z = temp.z;
     }
 
+    size_t hash() const {
+        /*
+        size_t hx = std::hash<C>()(x);
+        size_t hy = std::hash<C>()(y);
+        size_t hz = std::hash<C>()(z);
+        size_t h = 0;
+        h = h | hx;
+        h = h | hy << 8;
+        h = h | hz << 16;
+        return h;
+        */
+        size_t h = 0;
+        h = h | x;
+        h = h | y << 8;
+        h = h | z << 16;
+        return h;
+    }
+
+    bool operator<(const Vec<C>& rhs) const {
+        return hash() < rhs.hash();
+    }
+
+    friend std::ostream& operator<< (std::ostream &out, const Vec<C>& rhs) 
+    {
+        out << "[" << /*(float)*/ rhs.x << "," << /*(float)*/ rhs.y << "," << /*(float)*/ rhs.z << "]";
+        return out;
+    }
+
+    /*std::ostream& operator<<(std::ostream& stream, const Vec<C>& rhs) {
+        stream << "[" << rhs.x << "," << rhs.y << "," << rhs.z << "," << "]";
+        return stream;
+    }*/
+
     C x;
     C y;
     C z;
@@ -88,6 +122,10 @@ struct Vec8 : Vec<uint8_t> {
         return x == rhs.x &&
                y == rhs.y &&
                z == rhs.z;
+    }
+
+    bool operator!=(const Vec8& rhs) const {
+        return !(*this == rhs);
     }
 };
 

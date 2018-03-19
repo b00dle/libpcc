@@ -11,6 +11,7 @@
 #include <string>
 #include <sstream>
 #include <iostream>
+#include <map>
 
 /*
  * Provides interface to point cloud compression
@@ -31,13 +32,40 @@ public:
             : grid_precision()
             , num_threads(24)
             , verbose(false)
+            , irrelevance_coding(true)
+            , entropy_coding(true)
         {}
 
         EncodingSettings(const EncodingSettings&) = default;
 
+        Vec<float> const getQuantizationStepSize(int cell_idx) const 
+        {
+            if(cell_idx >= grid_precision.point_precision.size() || cell_idx < 0) {
+                std::cout << "NOTIFICATION: invalid cell_idx for call to getQuantizationStepSize" << std::endl;
+                std::cout << "  > got:" << cell_idx;
+                std::cout << "  > valid range: [0," << grid_precision.point_precision.size()-1 << "]." << std::endl;
+            }
+            
+            BoundingBox bb(grid_precision.bounding_box);
+            Vec8 dimensions(grid_precision.dimensions);
+            Vec<int> num_quant_values(
+                pow(2, grid_precision.point_precision[cell_idx].x), 
+                pow(2, grid_precision.point_precision[cell_idx].y), 
+                pow(2, grid_precision.point_precision[cell_idx].z)
+            );  
+            
+            Vec<float> quant_step;
+            quant_step.x = ((bb.max.x-bb.min.x) / dimensions.x) / num_quant_values.x;
+            quant_step.y = ((bb.max.y-bb.min.y) / dimensions.y) / num_quant_values.y;
+            quant_step.z = ((bb.max.z-bb.min.z) / dimensions.z) / num_quant_values.z;
+            return quant_step;
+        }
+
         GridPrecisionDescriptor grid_precision;
         bool verbose;
         int num_threads;
+        bool irrelevance_coding;
+        bool entropy_coding;
     };
 
     struct EncodeLog {
@@ -62,12 +90,34 @@ private:
     template<typename C>
     using GridVec = std::vector<std::vector<Vec<C>>>;
 
+    typedef std::map<Vec<uint64_t>, std::pair<Vec<uint64_t>, int>> PropertyMap;
+    typedef std::pair<Vec<uint64_t>, std::pair<Vec<uint64_t>, int>> PropertyPair;
+
+
+    struct GlobalHeader {
+      bool entropy_coding;
+      unsigned long uncompressed_size;
+
+      static size_t getByteSize()
+      {
+          return sizeof(bool) + sizeof(uncompressed_size);
+      }
+
+      const std::string toString()
+      {
+        std::stringstream ss;
+        ss << "GlobalHeader([entropy_coding = " << entropy_coding << "], ";
+        ss << "[uncompressed_size = " << uncompressed_size << "])";
+        return ss.str();
+      }
+    };
+
     /*
      * Data transfer object for encoding first chunk in a message
      * which contains a PointCloudGrid.
      * Holds general meta info about a PointCloudGrid
     */
-    struct GlobalHeader {
+    struct GridHeader {
         Vec8 dimensions;
         BoundingBox bounding_box;
         unsigned num_blacklist;
@@ -80,7 +130,7 @@ private:
         const std::string toString() const
         {
             std::stringstream ss;
-            ss << "GlobalHeader(dim=[" << (int) dimensions.x << "," << (int) dimensions.y << "," << (int) dimensions.z << "], ";
+            ss << "GridHeader(dim=[" << (int) dimensions.x << "," << (int) dimensions.y << "," << (int) dimensions.z << "], ";
             ss << "bb={[" << bounding_box.min.x << "," << bounding_box.min.y << "," << bounding_box.min.z << "];";
             ss << "[" << bounding_box.max.x << "," << bounding_box.max.y << "," << bounding_box.max.z << "]}, ";
             ss << "num_bl=" << num_blacklist << ")";
@@ -140,7 +190,22 @@ public:
     /* Decodes given message into point_cloud. Returns success. */
     bool decode(zmq::message_t& msg, std::vector<UncompressedVoxel>* point_cloud);
 
+    /* Returns a reference to the PointCloudGrid maintained by this instance.
+       After encode, this will contain the respective grid 
+       setup from given std::vector<UncompressedVoxel> using this->settings.
+       Value returned is read only. 
+       Value will be 0 if no encode/decode performed yet. */
+    const PointCloudGrid* getPointCloudGrid() const;
+
 private:
+
+    zmq::message_t prependGlobalHeader(zmq::message_t msg);
+
+    zmq::message_t entropyCompression(zmq::message_t msg);
+
+    zmq::message_t entropyDecompression(zmq::message_t& msg, size_t offset);
+
+
     /* Fills pc_grid_ from given point_cloud and settings */
     void buildPointCloudGrid(PointCloud<Vec<float>, Vec<float>>* point_cloud);
 
@@ -168,20 +233,26 @@ private:
      * Helper function for decode, to extract a VariantPointCloudGrid
      * from given zmq message, into pc_grid_.
      * Returns success of operation.
- *  */
+    */
     bool decodePointCloudGrid(zmq::message_t& msg);
 
-    /*
-     * Helper function for encodePointCloudGrid to encode GlobalHeader
-     * Returns updated offset.
-    */
-    size_t encodeGlobalHeader(zmq::message_t& msg, size_t offset=0);
+
+    size_t encodeGlobalHeader(zmq::message_t& msg, size_t offset = 0);
+
+    size_t decodeGlobalHeader(zmq::message_t& msg, size_t offset = 0);
+
 
     /*
-     * Helper function for decode to extract GlobalHeader
+     * Helper function for encodePointCloudGrid to encode GridHeader
      * Returns updated offset.
     */
-    size_t decodeGlobalHeader(zmq::message_t& msg, size_t offset=0);
+    size_t encodeGridHeader(zmq::message_t& msg, size_t offset = 0);
+
+    /*
+     * Helper function for decode to extract GridHeader
+     * Returns updated offset.
+    */
+    size_t decodeGridHeader(zmq::message_t& msg, size_t offset = 0);
 
     /*
      * Helper function for encodePointCloudGrid to encode black_list
@@ -239,7 +310,8 @@ private:
     size_t calcMessageSize(const std::vector<CellHeader*>&) const;
 
     PointCloudGrid* pc_grid_;
-    GlobalHeader* header_;
+    GridHeader* header_;
+    GlobalHeader* global_header_;
 };
 
 

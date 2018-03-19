@@ -3,7 +3,7 @@
 .idea/
 
 # Test files
-*.txt
+examples/*.txt
 cmake-build-debug
 test_cmdp
 
