@@ -1,0 +1,46 @@
+# Test LIBPCC HowTo
+
+## Project setup
+I.) Clone & build libpcc [<branch_to_test>]
+   I.i) git clone https://github.com/basticirca/libpcc
+   I.ii) git checkout <branch_to_test>
+   I.iii) mkdir lib
+   I.iv) cd examples -> make realclean -> make -j12
+
+II.) Clone & build  RGBD-Calib [master]
+   II.i) git clone https://github.com/basticirca/rgbd-calib
+   II.ii) git checkout master
+   II.iii) mkdir build -> cd build -> ccmake .. -> make -j12 install
+
+III.) Clone & build RGBD-LIBPCC-Recon [master]
+   III.i) git clone https://github.com/basticirca/rgbd-libpcc-recon
+   III.ii) git checkout master
+   III.iii) adjust lib and include path in /cmake/modules/FindPCC.cmake
+   III.iv) mkdir build -> cd build -> ccmake .. -> make -j12 install
+
+IV.) Clone & build guacamole [ftr_ss_libpcc]
+   IV.i) git clone https://github.com/basticirca/guacamole
+   IV.ii) git checkout ftr_ss_libpcc 
+   IV.iii) adjust lib and include path in /cmake/modules/FindPCC.cmake
+   IV.iv) mkdir build -> cd build -> ccmake .. -> make -j12 install
+
+## Running Test
+
+### Run Stream of Raw kinect data 
+I.) cd <path_to>/rgbd-calib/install/bin
+
+II.) ./play -f 20 -k 4 -s 127.0.0.1 -p 7001 /mnt/telepresence/kinect_recordings/christmas2017/stream_01.stream
+
+### Run Reconstruction, Encoder and Message Sender 
+I.) cd <path_to>/rgbd-libpcc-recon/install/bin
+
+II.)./kinect_client /mnt/telepresence/kinect_recordings/christmas2017/surface_23_24_25_26_pan.ks -u 141.54.147.XY:7050 -d 800 800 -f 141.54.147.XY:7051
+
+   II.i) with XY taken from ifconfig
+
+### Run Receiver, Decoder and Renderer
+I.) cd <path_to>/guacamole/exmaples/spoints
+
+II.) ./examples-spoints spoints_resource_file.sr
+
+   II.i) with spoints_resource_file adjusted to ifconfig

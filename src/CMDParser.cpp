@@ -1,4 +1,4 @@
-#include "CMDParser.hpp"
+#include "../include/CMDParser.hpp"
 #include <iostream>
 #include <stdlib.h>
 
@@ -12,8 +12,6 @@ CMDParser::CMDParser(std::string arguments):
   addOpt("h", -1,"help" ,/*cchar**/"show this help message and exit");
 }
 
-
-  
 CMDParser::~CMDParser(){
   std::map<std::string, std::vector<std::string>* >::iterator optIt = _opts.begin();
   for(; optIt != _opts.end(); ++optIt){
@@ -23,10 +21,9 @@ CMDParser::~CMDParser(){
   }
 }
 
-
 void
 CMDParser::addOpt(std::string opt, int numValues, std::string optlong, std::string help){
-  
+
   _opts[opt] = 0;
   _optsNumValues[opt] = numValues;
   _optslong[opt] = optlong;
@@ -43,13 +40,11 @@ CMDParser::addOpt(std::string opt, int numValues, std::string optlong, std::stri
   _help += "\n\t\t" + help + "\n";
 }
 
-
 void
 CMDParser::showHelp(){
   std::cout << _help;
   exit(0);
 }
-
 
 void
 CMDParser::init(int& argc, char** argv){
@@ -89,7 +84,7 @@ CMDParser::init(int& argc, char** argv){
     }
     if(!foundArg)
       _args.push_back(arg);
-    
+
   }
   if(_args.empty() && (_arguments != ""))
     showHelp();
@@ -102,7 +97,6 @@ CMDParser::isOptSet(std::string opt){
   return 0;
 }
 
-
 std::vector<int>
 CMDParser::getOptsInt(std::string opt) {
   std::vector<int> opts;
@@ -111,7 +105,7 @@ CMDParser::getOptsInt(std::string opt) {
       opts.push_back(atoi((*_opts[opt])[i].c_str()));
   return opts;
 }
- 
+
 std::vector<float>
 CMDParser::getOptsFloat(std::string opt) {
   std::vector<float> opts;
@@ -134,4 +128,3 @@ std::vector<std::string>
 CMDParser::getArgs() const{
   return _args;
 }
-

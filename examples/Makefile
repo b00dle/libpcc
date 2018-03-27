@@ -1,8 +1,8 @@
 
 
 CXX = c++
-CXXFLAGS = -std=c++0x -g -DLINUX -Wall -O3 -I../include \
-	-L../lib -lpcc -lzmq -Wl,-rpath,../lib
+CXXFLAGS = -std=c++0x -fopenmp -g -DLINUX -Wall -O3 -I../include \
+	-L../lib -lpcc -lzmq -lz -Wl,-rpath,../lib
 
 
 SOURCES = $(wildcard *.cpp)
