@@ -3,10 +3,21 @@
 #include <set>
 #include <omp.h>
 #include <map>
+#include <algorithm>
 
 #include "zlib.h"
 
 #include "../include/Measurement.hpp"
+
+bool invalidChar (char c) 
+{  
+    return !(c>=0 && c <128);   
+}
+
+void stripUnicode(std::string & str) 
+{ 
+    str.erase(std::remove_if(str.begin(),str.end(), invalidChar), str.end());  
+}
 
 PointCloudGridEncoder::PointCloudGridEncoder(const EncodingSettings& s)
     : Encoder()
@@ -114,8 +125,9 @@ void PointCloudGridEncoder::readFromAppendix(zmq::message_t& msg, std::string& t
 {
     text = "";
     unsigned char* data;
-    readFromAppendix(msg, data);
+    unsigned long size = readFromAppendix(msg, data);
     text.append(reinterpret_cast<const char*>(data));
+    stripUnicode(text);
     delete [] data;
 }
 
