@@ -97,6 +97,7 @@ int main(int argc, char* argv[]){
             Vec<BitCount>(BIT_8,BIT_8,BIT_8)  // default color encoding
     );
     encoder.settings.entropy_coding = true;
+    encoder.settings.appendix_size = 500;
 
     std::cout << "TEST QUANT SIZE" << std::endl;
     std::cout << "  > " << encoder.settings.getQuantizationStepSize(0) << std::endl;
@@ -119,6 +120,13 @@ int main(int argc, char* argv[]){
 
     Measure t;
     zmq::message_t msg_v_raw = encoder.encode(v_raw);
+    encoder.writeToAppendix(msg_v_raw, std::string("THIS FOO TEXT"));
+    std::string appendix;
+    unsigned char* data;
+    unsigned long size = encoder.readFromAppendix(msg_v_raw, data);
+    appendix.append(reinterpret_cast<const char*>(data));
+    delete [] data;
+    std::cout << "\n\n\nAPPENDIX DATA:" << appendix << "\n\n\n";
     std::cout << "TEST QUANT SIZE AFTER ENCODE (on grid)" << std::endl;
     std::cout << "  > " << encoder.getPointCloudGrid()->getQuantizationStepSize(0) << std::endl;
     std::cout << "vraw size after encoding " << msg_v_raw.size() << std::endl;
