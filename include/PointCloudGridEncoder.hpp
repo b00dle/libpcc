@@ -71,6 +71,7 @@ public:
     struct EncodeLog {
         time_t comp_time;
         time_t encode_time;
+        time_t entropy_compress_time;
         size_t raw_byte_size;
         size_t comp_byte_size;
     };
@@ -78,6 +79,7 @@ public:
     struct DecodeLog {
         time_t decomp_time;
         time_t decode_time;
+        time_t entropy_decompress_time;
         size_t total_cell_header_size;
         size_t global_header_size;
         size_t black_list_size;

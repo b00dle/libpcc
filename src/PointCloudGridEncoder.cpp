@@ -129,6 +129,9 @@ zmq::message_t PointCloudGridEncoder::entropyCompression(zmq::message_t msg) {
     memcpy((unsigned char*) out_msg.data() + offset, entropy_compressed, size_compressed);
 
     delete [] entropy_compressed;
+
+    encode_log.entropy_compress_time = t.stopWatch();
+
     if(settings.verbose) {
         std::cout << "ENTROPY COMPRESSION done." << std::endl;
         std::cout << "  > took " << t.stopWatch() << "ms." << std::endl;
@@ -160,6 +163,8 @@ zmq::message_t PointCloudGridEncoder::entropyDecompression(zmq::message_t& msg, 
         exit(1);    // quit.
         break;
     }
+
+    decode_log.entropy_decompress_time = t.stopWatch();
 
     if(settings.verbose) {
         std::cout << "ENTROPY DECOMPRESSION done." << std::endl;
@@ -332,6 +337,10 @@ void PointCloudGridEncoder::buildPointCloudGrid(const std::vector<UncompressedVo
             }
         }
 
+        time_t fill_grid = t.stopWatch();
+
+        encode_log.comp_time = fill_grid;
+
         if(settings.verbose) {
             std::cout << "POINTS DISCARDED \n";
             std::cout << "  > took " << t.stopWatch() << "ms." << std::endl;
@@ -487,7 +496,6 @@ bool PointCloudGridEncoder::extractPointCloudFromGrid(PointCloud<Vec<float>, Vec
             point_cloud->colors[point_idx[cell_idx][j]] = clr;
         }
     }
-
     decode_log.decomp_time = m.stopWatch();
 
     if(settings.verbose) {
