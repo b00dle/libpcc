@@ -110,6 +110,15 @@ unsigned long PointCloudGridEncoder::readFromAppendix(zmq::message_t& msg, unsig
     return global_header_->appendix_size;
 }
 
+void PointCloudGridEncoder::readFromAppendix(zmq::message_t& msg, std::string& text)
+{
+    text = "";
+    unsigned char* data;
+    readFromAppendix(msg, data);
+    text.append(reinterpret_cast<const char*>(data));
+    delete [] data;
+}
+
 zmq::message_t PointCloudGridEncoder::finalizeMessage(zmq::message_t msg) {
     global_header_->entropy_coding = false;
     global_header_->uncompressed_size = msg.size();

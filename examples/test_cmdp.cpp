@@ -120,13 +120,12 @@ int main(int argc, char* argv[]){
 
     Measure t;
     zmq::message_t msg_v_raw = encoder.encode(v_raw);
-    encoder.writeToAppendix(msg_v_raw, std::string("THIS FOO TEXT"));
+    encoder.writeToAppendix(msg_v_raw, std::string("sample appendix contents"));
     std::string appendix;
-    unsigned char* data;
-    unsigned long size = encoder.readFromAppendix(msg_v_raw, data);
-    appendix.append(reinterpret_cast<const char*>(data));
-    delete [] data;
-    std::cout << "\n\n\nAPPENDIX DATA:" << appendix << "\n\n\n";
+    encoder.readFromAppendix(msg_v_raw, appendix);
+    std::cout << "\n\n\nAPPENDIX\n";
+    std::cout << "  > size " << appendix.size() << std::endl;
+    std::cout << "  > data " << appendix << "\n\n\n";
     std::cout << "TEST QUANT SIZE AFTER ENCODE (on grid)" << std::endl;
     std::cout << "  > " << encoder.getPointCloudGrid()->getQuantizationStepSize(0) << std::endl;
     std::cout << "vraw size after encoding " << msg_v_raw.size() << std::endl;

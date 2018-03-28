@@ -214,6 +214,7 @@ public:
      * Returns size of appendix.
     */
     unsigned long readFromAppendix(zmq::message_t& msg, unsigned char*& data);
+    void readFromAppendix(zmq::message_t& msg, std::string& text);
 
 private:
     /* Prepends GlobalHeader and adds space for appendix. */
