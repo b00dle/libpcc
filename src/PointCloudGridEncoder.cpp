@@ -122,7 +122,6 @@ void PointCloudGridEncoder::readFromAppendix(zmq::message_t& msg, std::string& t
     text = "";
     unsigned char* data;
     unsigned long size = readFromAppendix(msg, data);
-    std::cout << "\n\n\nappendix SIZE read " << size << std::endl;
     text.append(reinterpret_cast<const char*>(data));
     if(size < text.size())
         text = text.substr(0, size);
