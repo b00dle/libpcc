@@ -10,16 +10,6 @@
 
 #include "../include/Measurement.hpp"
 
-bool invalidChar (char c) 
-{  
-    return !(c>=0 && c <128);   
-}
-
-void stripUnicode(std::string& str) 
-{ 
-    str.erase(std::remove_if(str.begin(),str.end(), invalidChar), str.end());  
-}
-
 void removeTailingWhitespaces(std::string& str)
 {
     str = std::regex_replace(str, std::regex(" +$"), "");
@@ -132,9 +122,12 @@ void PointCloudGridEncoder::readFromAppendix(zmq::message_t& msg, std::string& t
     text = "";
     unsigned char* data;
     unsigned long size = readFromAppendix(msg, data);
+    std::cout << "\n\n\nappendix SIZE read " << size << std::endl;
     text.append(reinterpret_cast<const char*>(data));
+    if(size < text.size())
+        text = text.substr(0, size);
     removeTailingWhitespaces(text);
-    stripUnicode(text);
+    //stripUnicode(text);
     delete [] data;
 }
 

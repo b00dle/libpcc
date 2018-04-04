@@ -124,8 +124,8 @@ int main(int argc, char* argv[]){
     std::string appendix;
     encoder.readFromAppendix(msg_v_raw, appendix);
     std::cout << "\n\n\nAPPENDIX\n";
-    std::cout << "  > size " << appendix.size() << std::endl;
-    std::cout << "  > data " << appendix << "\n\n\n";
+    std::cout << "  > size:" << appendix.size() << std::endl;
+    std::cout << "  > data:'" << appendix << "'\n\n\n";
     std::cout << "TEST QUANT SIZE AFTER ENCODE (on grid)" << std::endl;
     std::cout << "  > " << encoder.getPointCloudGrid()->getQuantizationStepSize(0) << std::endl;
     std::cout << "vraw size after encoding " << msg_v_raw.size() << std::endl;
