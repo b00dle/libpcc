@@ -4,6 +4,7 @@
 #include <omp.h>
 #include <map>
 #include <algorithm>
+#include <regex>
 
 #include "zlib.h"
 
@@ -14,9 +15,14 @@ bool invalidChar (char c)
     return !(c>=0 && c <128);   
 }
 
-void stripUnicode(std::string & str) 
+void stripUnicode(std::string& str) 
 { 
     str.erase(std::remove_if(str.begin(),str.end(), invalidChar), str.end());  
+}
+
+void removeTailingWhitespaces(std::string& str)
+{
+    str = std::regex_replace(str, std::regex(" +$"), "");
 }
 
 PointCloudGridEncoder::PointCloudGridEncoder(const EncodingSettings& s)
@@ -127,6 +133,7 @@ void PointCloudGridEncoder::readFromAppendix(zmq::message_t& msg, std::string& t
     unsigned char* data;
     unsigned long size = readFromAppendix(msg, data);
     text.append(reinterpret_cast<const char*>(data));
+    removeTailingWhitespaces(text);
     stripUnicode(text);
     delete [] data;
 }
@@ -146,6 +153,9 @@ zmq::message_t PointCloudGridEncoder::finalizeMessage(zmq::message_t msg) {
 
     memcpy((unsigned char*) out_msg.data() + offset,
      (unsigned char*) msg.data(), msg.size());
+
+    if(settings.appendix_size > 0)
+        writeToAppendix(out_msg, std::string(settings.appendix_size, ' '));
 
     return out_msg;
 }
@@ -186,6 +196,8 @@ zmq::message_t PointCloudGridEncoder::entropyCompression(zmq::message_t msg) {
     );
     int offset = encodeGlobalHeader(out_msg);
     memcpy((unsigned char*) out_msg.data() + offset, entropy_compressed, size_compressed);
+    if(settings.appendix_size > 0)
+        writeToAppendix(out_msg, std::string(settings.appendix_size, ' '));
 
     delete [] entropy_compressed;
     if(settings.verbose) {
