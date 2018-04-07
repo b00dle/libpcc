@@ -129,6 +129,9 @@ zmq::message_t PointCloudGridEncoder::entropyCompression(zmq::message_t msg) {
     memcpy((unsigned char*) out_msg.data() + offset, entropy_compressed, size_compressed);
 
     delete [] entropy_compressed;
+
+    encode_log.entropy_compress_time = t.stopWatch();
+
     if(settings.verbose) {
         std::cout << "ENTROPY COMPRESSION done." << std::endl;
         std::cout << "  > took " << t.stopWatch() << "ms." << std::endl;
@@ -160,6 +163,8 @@ zmq::message_t PointCloudGridEncoder::entropyDecompression(zmq::message_t& msg, 
         exit(1);    // quit.
         break;
     }
+
+    decode_log.entropy_decompress_time = t.stopWatch();
 
     if(settings.verbose) {
         std::cout << "ENTROPY DECOMPRESSION done." << std::endl;
@@ -237,6 +242,9 @@ void PointCloudGridEncoder::buildPointCloudGrid(PointCloud<Vec<float>, Vec<float
 
     time_t fill_grid = t.stopWatch();
 
+    encode_log.comp_time = fill_grid;
+    encode_log.raw_byte_size = point_cloud->size() * sizeof(UncompressedVoxel);
+
     if(settings.verbose) {
         std::cout << "DONE building grid\n";
         std::cout << "  > took " << fill_grid << "ms.\n";
@@ -274,6 +282,8 @@ void PointCloudGridEncoder::buildPointCloudGrid(const std::vector<UncompressedVo
 
     if(num_points < 0)
         num_points = point_cloud.size();
+
+    encode_log.raw_byte_size = point_cloud.size() * sizeof(UncompressedVoxel);
 
     if(settings.verbose) {
         std::cout << "POINT CLOUD\n";
@@ -326,6 +336,10 @@ void PointCloudGridEncoder::buildPointCloudGrid(const std::vector<UncompressedVo
                 ++elmnt_idx;
             }
         }
+
+        time_t fill_grid = t.stopWatch();
+
+        encode_log.comp_time = fill_grid;
 
         if(settings.verbose) {
             std::cout << "POINTS DISCARDED \n";
@@ -394,6 +408,8 @@ void PointCloudGridEncoder::buildPointCloudGrid(const std::vector<UncompressedVo
         }
 
         time_t fill_grid = t.stopWatch();
+
+        encode_log.comp_time = fill_grid;
 
         if(settings.verbose) {
             std::cout << "DONE building grid\n";
@@ -480,10 +496,11 @@ bool PointCloudGridEncoder::extractPointCloudFromGrid(PointCloud<Vec<float>, Vec
             point_cloud->colors[point_idx[cell_idx][j]] = clr;
         }
     }
+    decode_log.decomp_time = m.stopWatch();
 
     if(settings.verbose) {
         std::cout << "DECOMPRESSION done.\n";
-        std::cout << "  > took " << m.stopWatch() << "ms.\n";
+        std::cout << "  > took " << decode_log.decomp_time << "ms.\n";
     }
 
     return true;//point_idx == point_cloud->size();
@@ -572,9 +589,11 @@ bool PointCloudGridEncoder::extractPointCloudFromGrid(std::vector<UncompressedVo
         }
     }
 
+    decode_log.decomp_time = m.stopWatch();
+
     if(settings.verbose) {
         std::cout << "DECOMPRESSION done.\n";
-        std::cout << "  > took " << m.stopWatch() << "ms.\n";
+        std::cout << "  > took " << decode_log.decomp_time << "ms.\n";
     }
 
     return true;//point_idx == point_cloud->size();
@@ -614,7 +633,6 @@ zmq::message_t PointCloudGridEncoder::encodePointCloudGrid() {
 
     // calc overall message size and init message
     size_t message_size_bytes = calcMessageSize(cell_headers);
-
     zmq::message_t message(message_size_bytes);
 
     size_t offset = encodeGridHeader(message);
@@ -663,9 +681,12 @@ zmq::message_t PointCloudGridEncoder::encodePointCloudGrid() {
 
     time_t post_cells = m.stopWatch();
 
+    encode_log.encode_time = post_cells;
+    encode_log.comp_byte_size = message_size_bytes;
+
     if(settings.verbose) {
         std::cout << "ENCODING done.\n";
-        std::cout << "  > took " << post_cells << "ms.\n";
+        std::cout << "  > took " << encode_log.encode_time << "ms.\n";
         std::cout << "    > pre-encode cells " << pre_cells << "ms.\n";
         std::cout << "    > encode cells " << post_cells-pre_cells << "ms.\n";
     }
@@ -766,6 +787,8 @@ bool PointCloudGridEncoder::decodePointCloudGrid(zmq::message_t& msg)
             std::cout << "WARNING: No points in cell\n  > Cell should've been blacklisted.\n";
         }
     }
+    
+    decode_log.total_cell_header_size = cell_headers.size() * CellHeader::getByteSize();
 
     while(!cell_headers.empty()) {
         delete cell_headers.back();
@@ -773,6 +796,10 @@ bool PointCloudGridEncoder::decodePointCloudGrid(zmq::message_t& msg)
     }
 
     time_t post_cell_decode = t.stopWatch();
+
+    decode_log.decode_time = post_cell_decode;
+    decode_log.black_list_size = header_->num_blacklist*sizeof(unsigned);
+    decode_log.global_header_size = GlobalHeader::getByteSize();
 
     if(settings.verbose) {
         std::cout << "DECODING CELLS done.\n  > took " << post_cell_decode << "ms.\n";

@@ -8,67 +8,6 @@
 #include "../include/PointCloudGridEncoder.hpp"
 #include "../include/BinaryFile.hpp"
 
-
-// zmq::message_t zlibCompress (zmq::message_t msg_encoded) {
-//   // zmq::message_t msg_v_raw = encoder.encode(v_raw);
-//   unsigned long sizeDataCompressed  = (msg_encoded.size() * 1.1) + 12;
-//   unsigned char* dataCompressed = (unsigned char*)malloc(sizeDataCompressed);
-//
-//   std::cout << "before compress size " << msg_encoded.size() << std::endl;
-//   std::cout << "before compress size (+ upscale for zlib) " << sizeDataCompressed << std::endl;
-//   int z_result = compress(dataCompressed, &sizeDataCompressed, (unsigned char*) msg_encoded.data(), msg_encoded.size());
-//   std::cout << "after compress size " << sizeDataCompressed << std::endl;
-//
-//   switch( z_result )
-//   {
-//   case Z_OK:
-//       printf("***** SUCCESS! *****\n");
-//       break;
-//
-//   case Z_MEM_ERROR:
-//       printf("out of memory\n");
-//       exit(1);    // quit.
-//       break;
-//
-//   case Z_BUF_ERROR:
-//       printf("output buffer wasn't large enough!\n");
-//       exit(1);    // quit.
-//       break;
-//   }
-//   zmq::message_t msg_compressed(sizeDataCompressed);
-//   memcpy((unsigned char*) msg_compressed.data(), (const unsigned char*) dataCompressed, sizeDataCompressed);
-//
-//   return msg_compressed;
-// }
-//
-// zmq::message_t zlibUncompress (zmq::message_t msg_compressed, unsigned long sizeDataUncompressed) {
-//   // unsigned long sizeDataUncompressed = msg_v_raw.size();
-//   zmq::message_t msg_uncompressed(sizeDataUncompressed);
-//
-//   std::cout << "before uncompress (set to raw msg size) " << sizeDataUncompressed << std::endl;
-//   int z_result = uncompress((unsigned char*) msg_uncompressed.data(), &sizeDataUncompressed, (unsigned char*) msg_compressed.data(), msg_compressed.size());
-//   std::cout << "after uncompress " << sizeDataUncompressed << std::endl;
-//
-//   switch( z_result )
-//   {
-//   case Z_OK:
-//       printf("***** SUCCESS! *****\n");
-//       break;
-//
-//   case Z_MEM_ERROR:
-//       printf("out of memory\n");
-//       exit(1);    // quit.
-//       break;
-//
-//   case Z_BUF_ERROR:
-//       printf("output buffer wasn't large enough!\n");
-//       exit(1);    // quit.
-//       break;
-//   }
-//
-//   return msg_uncompressed;
-// }
-
 int main(int argc, char* argv[]){
     /*
     CMDParser p("socket");
@@ -80,313 +19,177 @@ int main(int argc, char* argv[]){
     zmq::socket_t  socket(ctx, ZMQ_PUB); // means a publisher
 
     uint32_t hwm = 1;
-    socket.setsockopt(ZMQ_SNDHWM,&hwm, sizeof(hwm));
+    socket.setsockopt(ZMQ_SNDHWM, &hwm, sizeof(hwm));
 
     std::string endpoint("tcp://" + socket_name);
     socket.bind(endpoint.c_str());
     */
 
-    // ENCODER STUP
+    //Definie EncoderSettings
     PointCloudGridEncoder encoder;
-    // settings should match './grid_log_info.txt'
-    BoundingBox bb(Vec<float>(-1.0f,0.05f,-1.0f), Vec<float>(1.0f,2.2f,1.0f));
+    BoundingBox bb(Vec<float>(-1.0f, 0.0f, -1.0f), Vec<float>(1.0f, 2.2f, 1.0f));
     encoder.settings.grid_precision = GridPrecisionDescriptor(
-            Vec8(8,8,8), // dimensions
-            bb,
-            Vec<BitCount>(BIT_8,BIT_8,BIT_8), // default point encoding
-            Vec<BitCount>(BIT_8,BIT_8,BIT_8)  // default color encoding
+      Vec8(8,8,8),
+      bb,
+      Vec<BitCount>(BIT_8,BIT_8,BIT_8),
+      Vec<BitCount>(BIT_8,BIT_8,BIT_8)
     );
+    encoder.settings.irrelevance_coding = true;
     encoder.settings.entropy_coding = true;
 
-    std::cout << "TEST QUANT SIZE" << std::endl;
-    std::cout << "  > " << encoder.settings.getQuantizationStepSize(0) << std::endl;
+    // read raw reference file
+    std::vector<UncompressedVoxel> v_raw_pic;
+    std::cout << "Read raw Data from Picture based approach" << std::endl;
+    BinaryFile raw_pic;
+    if(raw_pic.read("./raw_data.txt")) {
+      v_raw_pic.resize(raw_pic.getSize() / sizeof(UncompressedVoxel));
+      raw_pic.copy((char*) v_raw_pic.data());
+      std::cout << "READ raw voxels from file done.\n";
+    }
+    else {
+      std::cout << "READ raw voxels from file failed.\n";
+    }
+
+    // write to pc
+    PointCloud<Vec<float>, Vec<float>> pc_raw_pic(BoundingBox(Vec<float>(-1.01f,-1.01f,-1.01f), Vec<float>(1.01f,1.01f,1.01f)));
+    for(auto index : v_raw_pic) {
+      pc_raw_pic.points.emplace_back(index.pos[0], index.pos[1], index.pos[2]);
+      pc_raw_pic.colors.emplace_back(((float) index.color_rgba[0]) / 255.0f, ((float) index.color_rgba[0]) / 255.0f, ((float) index.color_rgba[0]) / 255.0f);
+    }
+    /*
+    // write multiple files to vector to access later
+    std::vector<std::string> files;
+    files.push_back("./snap-8-6-4de.txt");
+    files.push_back("./snap-8-7-6de.txt");
+    files.push_back("./snap-16-8-8de.txt");
+
+    // access files
+    for(auto indx : files) {
+        std::vector<UncompressedVoxel> v_dec;
+        BinaryFile dec;
+        if(dec.read(indx)) {
+            v_dec.resize(dec.getSize() / sizeof(UncompressedVoxel));
+            dec.copy((char*) v_dec.data());
+        //    std::cout << "READ dec voxels from file done.\n";
+        }
+        else {
+            std::cout << "READ dec voxels from file failed.\n";
+        }
+        // fill pointcloud
+        v_dec[0].pos; // float[3]
+        v_dec[0].color_rgba; // unsigned char[4] aaaaaaaargb
+        PointCloud<Vec<float>, Vec<float>> pc;
+        for(auto voxel : v_dec) {
+            pc.points.push_back(Vec<float>(voxel.pos[0],voxel.pos[1],voxel.pos[2]));
+            pc.colors.push_back(Vec<float>(((float)voxel.color_rgba[1]) / 255.0f, ((float) voxel.color_rgba[2]) / 255.0f, ((float) voxel.color_rgba[3]) / 255.0f));
+        }
+
+        // compare whole input array to raw / base pointcloud
+        Measure m;
+        std::vector<float> results = m.comparePC(pc_raw_pic, pc, bb);
+
+        // print results
+        std::cout << indx << ", ";
+        std::cout << results[0] << ", ";
+        std::cout << results[2] << ", ";
+        std::cout << results[3] << ", ";
+        std::cout << results[5] << std::endl;
+    }*/
+
+    // write pc to zmq msg
+    // encode & decode msg
+    // write decoded msg to voxelvec
+    zmq::message_t msg_raw_pic = encoder.encode(v_raw_pic);
+    std::vector<UncompressedVoxel> msg_decoded_pic;
+    encoder.decode(msg_raw_pic, & msg_decoded_pic);
+
+    // create uncompressed pc
+    PointCloud<Vec<float>, Vec<float>> pc_pcc(BoundingBox(Vec<float>(-1.01f,-1.01f,-1.01f), Vec<float>(1.01f,1.01f,1.01f)));
+    for(auto index : msg_decoded_pic) {
+      pc_pcc.points.emplace_back(index.pos[0], index.pos[1], index.pos[2]);
+      pc_pcc.colors.emplace_back(((float) index.color_rgba[0]) / 255.0f, ((float) index.color_rgba[0]) / 255.0f, ((float) index.color_rgba[0]) / 255.0f);
+    }
 
 
-    // READ RAW DATA FROM FILE
-    std::vector<UncompressedVoxel> v_raw;
-    BinaryFile raw;
-    if(raw.read("./clean.txt")) {
-        v_raw.resize(raw.getSize() / sizeof(UncompressedVoxel));
-        raw.copy((char*) v_raw.data());
+
+    // current tests pipeline comparison
+    std::vector<UncompressedVoxel> v_comp_pic;
+    std::cout << "Read 'compressed' from Picture based approach" << std::endl;
+    BinaryFile comp_pic;
+    if(comp_pic.read("./comp_nint.txt")) {
+        v_comp_pic.resize(comp_pic.getSize() / sizeof(UncompressedVoxel));
+        comp_pic.copy((char*) v_comp_pic.data());
         std::cout << "READ raw voxels from file done.\n";
     }
     else {
         std::cout << "READ raw voxels from file failed.\n";
     }
-    std::cout << "RAW VOXEL data (parsed from file) \n";
-    std::cout << "  > voxel count " << v_raw.size() << std::endl;
-
-
-    Measure t;
-    zmq::message_t msg_v_raw = encoder.encode(v_raw);
-    std::cout << "TEST QUANT SIZE AFTER ENCODE (on grid)" << std::endl;
-    std::cout << "  > " << encoder.getPointCloudGrid()->getQuantizationStepSize(0) << std::endl;
-    std::cout << "vraw size after encoding " << msg_v_raw.size() << std::endl;
-    std::cout << "encoding finished" << std::endl;
-    std::vector<UncompressedVoxel> msg_v_final;
-    std::cout << "begin decoding" << std::endl;
-    encoder.decode(msg_v_raw, &msg_v_final);
-    std::cout << "decoding finished" << std::endl;
-    std::cout << "TEST QUANT SIZE AFTER DECODE (on grid)" << std::endl;
-    std::cout << "  > " << encoder.getPointCloudGrid()->getQuantizationStepSize(0) << std::endl;
-
-
-
-    // float avg_clr[4] = {0.0f,0.0f,0.0f,0.0f};
-    // float avg_pos[3] = {0.0f,0.0f,0.0f};
-    // int skipped = 0;
-    // for(auto voxel:v_raw) {
-    //     avg_clr[0] += (static_cast<float>(voxel.color_rgba[0]));
-    //     avg_clr[1] += (static_cast<float>(voxel.color_rgba[1]));
-    //     avg_clr[2] += (static_cast<float>(voxel.color_rgba[2]));
-    //     avg_clr[3] += (static_cast<float>(voxel.color_rgba[3]));
-    //     if(bb.contains(voxel.pos)) {
-    //         avg_pos[0] += voxel.pos[0];
-    //         avg_pos[1] += voxel.pos[1];
-    //         avg_pos[2] += voxel.pos[2];
-    //     }
-    //     else {
-    //         ++skipped;
-    //     }
-    // }
-    // avg_clr[0] /= v_raw.size();
-    // avg_clr[1] /= v_raw.size();
-    // avg_clr[2] /= v_raw.size();
-    // avg_clr[3] /= v_raw.size();
-    // avg_pos[0] /= (v_raw.size() - skipped);
-    // avg_pos[1] /= (v_raw.size() - skipped);
-    // avg_pos[2] /= (v_raw.size() - skipped);
-    //
-    // std::cout << "  > avg color "
-    //           << avg_clr[0] << ","
-    //           << avg_clr[1] << ","
-    //           << avg_clr[2] << ","
-    //           << avg_clr[3] << std::endl;
-    // std::cout << "  > avg pos "
-    //           << avg_pos[0] << ","
-    //           << avg_pos[1] << ","
-    //           << avg_pos[2] << std::endl;
-
-    // zmq::message_t msg_v_raw = encoder.encode(v_raw);
-    //
-    // zmq::message_t msg_v_compressed = zlibCompress(msg_v_raw);
-    //
-    // zmq::message_t msg_v_uncompressed = zlibUncompress(msg_v_compressed, msg_v_raw.size());
-    //
-    // std::vector<UncompressedVoxel> msg_v_final;
-    // encoder.decode(msg_v_uncompressed, &msg_v_final);
-    // std::cout << "DECODED message (encoded using raw voxels)\n";
-    // std::cout << "  > voxel count " << msg_v_final.size() << std::endl;
-
-
-    //---------------------------------------------------------------------------------------------------------------------------------
-    // zmq::message_t msg_v_raw = encoder.encode(v_raw);
-    // unsigned long sizeDataCompressed  = (msg_v_raw.size() * 1.1) + 12;
-    // unsigned char* dataCompressed = (unsigned char*)malloc(sizeDataCompressed);
-    //
-    // std::cout << "before compress size " << msg_v_raw.size() << std::endl;
-    // std::cout << "before compress size (+ upscale for zlib) " << sizeDataCompressed << std::endl;
-    // t.startWatch();
-    // int z_result = compress(dataCompressed, &sizeDataCompressed, (unsigned char*) msg_v_raw.data(), msg_v_raw.size());
-    // std::cout << "Compression took: " << t.stopWatch() << " ms" << std::endl;
-    // std::cout << "after compress size " << sizeDataCompressed << std::endl;
-    //
-    // switch( z_result )
-    // {
-    // case Z_OK:
-    //     printf("***** SUCCESS! *****\n");
-    //     break;
-    //
-    // case Z_MEM_ERROR:
-    //     printf("out of memory\n");
-    //     exit(1);    // quit.
-    //     break;
-    //
-    // case Z_BUF_ERROR:
-    //     printf("output buffer wasn't large enough!\n");
-    //     exit(1);    // quit.
-    //     break;
-    // }
-    // zmq::message_t msg_v_compressed(sizeDataCompressed);
-    // std::cout << "msg_compressed size " << msg_v_compressed.size() << std::endl;
-    // memcpy((unsigned char*) msg_v_compressed.data(), (const unsigned char*) dataCompressed, sizeDataCompressed);
-    // std::cout << "msg_compressed size " << msg_v_compressed.size() << std::endl;
-    //
-    // unsigned long sizeDataUncompressed = msg_v_raw.size();
-    // zmq::message_t msg_v_uncompressed(sizeDataUncompressed);
-    //
-    // std::cout << "before uncompress (set to raw msg size) " << sizeDataUncompressed << std::endl;
-    // t.startWatch();
-    // z_result = uncompress((unsigned char*) msg_v_uncompressed.data(), &sizeDataUncompressed, (unsigned char*) msg_v_compressed.data(), msg_v_compressed.size());
-    // std::cout << "Uncompression took: " << t.stopWatch() << " ms" << std::endl;
-    // std::cout << "after uncompress " << sizeDataUncompressed << std::endl;
-    //
-    //
-    // switch( z_result )
-    // {
-    // case Z_OK:
-    //     printf("***** SUCCESS! *****\n");
-    //     break;
-    //
-    // case Z_MEM_ERROR:
-    //     printf("out of memory\n");
-    //     exit(1);    // quit.
-    //     break;
-    //
-    // case Z_BUF_ERROR:
-    //     printf("output buffer wasn't large enough!\n");
-    //     exit(1);    // quit.
-    //     break;
-    // }
-    //
-    // std::vector<UncompressedVoxel> msg_v_final;
-    // encoder.decode(msg_v_uncompressed, &msg_v_final);
-    // std::cout << "DECODED message (encoded using raw voxels)\n";
-    // std::cout << "  > voxel count " << msg_v_final.size() << std::endl;
-    //---------------------------------------------------------------------------------------------------------------------------------
-
-    // std::vector<UncompressedVoxel> msg_v_raw_decoded;
-    // encoder.decode(msg_v_raw, &msg_v_raw_decoded);
-    // std::cout << "DECODED message (encoded using raw voxels)\n";
-    // std::cout << "  > voxel count " << msg_v_raw_decoded.size() << std::endl;
-
-    // avg_clr[0] = 0.0f;
-    // avg_clr[1] = 0.0f;
-    // avg_clr[2] = 0.0f;
-    // avg_clr[3] = 0.0f;
-    // avg_pos[0] = 0.0f;
-    // avg_pos[1] = 0.0f;
-    // avg_pos[2] = 0.0f;
-    // for(auto voxel:msg_v_raw_decoded) {
-    //     avg_clr[0] += (static_cast<float>(voxel.color_rgba[0]));
-    //     avg_clr[1] += (static_cast<float>(voxel.color_rgba[1]));
-    //     avg_clr[2] += (static_cast<float>(voxel.color_rgba[2]));
-    //     avg_clr[3] += (static_cast<float>(voxel.color_rgba[3]));
-    //     avg_pos[0] += voxel.pos[0];
-    //     avg_pos[1] += voxel.pos[1];
-    //     avg_pos[2] += voxel.pos[2];
-    // }
-    // avg_clr[0] /= msg_v_raw_decoded.size();
-    // avg_clr[1] /= msg_v_raw_decoded.size();
-    // avg_clr[2] /= msg_v_raw_decoded.size();
-    // avg_clr[3] /= msg_v_raw_decoded.size();
-    // avg_pos[0] /= msg_v_raw_decoded.size();
-    // avg_pos[1] /= msg_v_raw_decoded.size();
-    // avg_pos[2] /= msg_v_raw_decoded.size();
-    //
-    // std::cout << "  > avg color "
-    //           << avg_clr[0] << ","
-    //           << avg_clr[1] << ","
-    //           << avg_clr[2] << ","
-    //           << avg_clr[3] << std::endl;
-    // std::cout << "  > avg pos "
-    //           << avg_pos[0] << ","
-    //           << avg_pos[1] << ","
-    //           << avg_pos[2] << std::endl;
-
-    /*
-    Measure t;
-
-    PointCloud<Vec<float>, Vec<float>> pc(BoundingBox(Vec<float>(-1.01f,-1.01f,-1.01f), Vec<float>(1.01f,1.01f,1.01f)));
-    std::vector<UncompressedVoxel> pc_vec;
-    for(float x = -1.0f; x < 1.0; x += 0.04) {
-        for(float y = -1.0f; y < 1.0; y += 0.04) {
-            for(float z = -1.0f; z < 1.0; z += 0.04) {
-                pc.points.emplace_back(x,y,z);
-                pc.colors.emplace_back((x+1)/2.0f,(y+1)/2.0f,(z+1)/2.0f);
-                pc_vec.push_back(UncompressedVoxel());
-                pc_vec.back().pos[0] = x;
-                pc_vec.back().pos[1] = y;
-                pc_vec.back().pos[2] = z;
-                pc_vec.back().color_rgba[0] = static_cast<unsigned char>(pc.colors.back().x*255.0f);
-                pc_vec.back().color_rgba[1] = static_cast<unsigned char>(pc.colors.back().y*255.0f);
-                pc_vec.back().color_rgba[2] = static_cast<unsigned char>(pc.colors.back().z*255.0f);
-                pc_vec.back().color_rgba[3] = 255;
-            }
-        }
+    PointCloud<Vec<float>, Vec<float>> pc_comp_pic(BoundingBox(Vec<float>(-1.01f,-1.01f,-1.01f), Vec<float>(1.01f,1.01f,1.01f)));
+    for(auto index : v_comp_pic) {
+      pc_comp_pic.points.emplace_back(index.pos[0], index.pos[1], index.pos[2]);
+      pc_comp_pic.colors.emplace_back(((float) index.color_rgba[0]) / 255.0f, ((float) index.color_rgba[1]) / 255.0f, ((float) index.color_rgba[2]) / 255.0f);
+      // std::cout << "PC Pos check: " << index.pos[0] << ", " << index.pos[1] << ", " << index.pos[2] << std::endl;
+      // std::cout << "PC Color check: " <<(float) index.color_rgba[0] << ", " <<(float) index.color_rgba[1] << ", " <<(float) index.color_rgba[2] << ", " << index.color_rgba[3] << std::endl;
     }
 
-    std::cout << "POINT CLOUD" << std::endl;
-    std::cout << "  > size " << pc.size() << "\n";
-
-    //// ENCODING
-
-    PointCloudGridEncoder encoder;
-    encoder.settings.grid_precision = GridPrecisionDescriptor(
-            Vec8(4,4,4), // dimensions
-            pc.bounding_box, // bounding box
-            Vec<BitCount>(BIT_4,BIT_4,BIT_4), // default point encoding
-            Vec<BitCount>(BIT_8,BIT_8,BIT_8)  // default color encoding
-    );
-    encoder.settings.num_threads = 24;
-
-    t.startWatch();
-    zmq::message_t msg = encoder.encode(pc_vec);
-
-    std::cout << "ENCODING DONE in " << t.stopWatch() << "ms.\n";
-    auto size_bytes = static_cast<int>(msg.size());
-    int size_bit = size_bytes * 8;
-    float mbit = size_bit / 1000000.0f;
-
-    std::cout << "  > Message Size\n"
-              << "    > bytes " << size_bytes << "\n"
-              << "    > mbit " << mbit << "\n";
-    */
-
-    //// TESTING FILE READ/WRITE
-
-    /*
-    BinaryFile f(msg);
-    if(f.write("./test_pc_grid.txt")) {
-        std::cout << "WRITE TO FILE done.\n";
-        if(f.read("./test_pc_grid.txt")) {
-            f.copy((char*) msg.data());
-            std::cout << "READ FROM FILE done.\n";
-        }
-        else {
-            std::cout << "READ FROM FILE failed.\n";
-        }
+    std::vector<UncompressedVoxel> v_comp_int_pic;
+    std::cout << "Read 'compressed interframe' from Picture based approach" << std::endl;
+    BinaryFile comp_int_pic;
+    if(comp_int_pic.read("./comp_int.txt")) {
+        v_comp_int_pic.resize(comp_int_pic.getSize() / sizeof(UncompressedVoxel));
+        comp_int_pic.copy((char*) v_comp_int_pic.data());
+        std::cout << "READ raw voxels from file done.\n";
     }
     else {
-        std::cout << "WRITE TO FILE failed.\n";
+        std::cout << "READ raw voxels from file failed.\n";
     }
-    */
-
-    //// DECODING
-    /*
-    PointCloud<Vec<float>, Vec<float>> pc2;
-    std::vector<UncompressedVoxel> pc_vec2;
-    t.startWatch();
-    //zmq::message_t msg2 = f.get();
-    bool success = encoder.decode(msg, &pc_vec2);
-    std::cout << "DECODING DONE in " << t.stopWatch() << "ms.\n";
-    std::cout << "  > size " << pc_vec2.size() << "\n";
-    if(success)
-        std::cout << "  > success: YES\n";
-    else
-        std::cout << "  > success: NO\n";
-    */
-
-    /*
-    t.startWatch();
-    std::cout << "  > MSE " << t.meanSquaredErrorPC(pc, pc2) << std::endl;
-    std::cout << "    > took " << t.stopWatch() << "ms" << std::endl;
-    */
-
-    /*
-    unsigned tick = 0;
-    while(true){
-
-        zmq::message_t zmqm(sizeof(unsigned));
-
-        memcpy( (unsigned char* ) zmqm.data(), (const unsigned char*) &tick, sizeof(unsigned));
-        socket.send(zmqm);
-
-        //std::cout << "sending: " << tick << std::endl;
-
-        ++tick;
+    PointCloud<Vec<float>, Vec<float>> pc_comp_int_pic(BoundingBox(Vec<float>(-1.01f,-1.01f,-1.01f), Vec<float>(1.01f,1.01f,1.01f)));
+    for(auto index : v_comp_int_pic) {
+      pc_comp_pic.points.emplace_back(index.pos[0], index.pos[1], index.pos[2]);
+      pc_comp_pic.colors.emplace_back(((float) index.color_rgba[0]) / 255.0f,((float) index.color_rgba[0]) / 255.0f, ((float) index.color_rgba[0]) / 255.0f);
     }
-    */
+
+    // print num of points
+    std::cout << "comp size / num points (without interframe): " << v_comp_pic.size() << " / " << v_comp_pic.size() / sizeof(UncompressedVoxel) << std::endl;
+    std::cout << "comp size / num points (with interframe): " << v_comp_int_pic.size() << " / " << v_comp_int_pic.size() / sizeof(UncompressedVoxel) << std::endl;
+    std::cout << "comp size / num points (with pcc): " << msg_decoded_pic.size() << " / " << msg_decoded_pic.size() / sizeof(UncompressedVoxel) << std::endl;
+    std::cout << "comp raw size / num points: " << v_raw_pic.size() << " / " << v_raw_pic.size() / sizeof(UncompressedVoxel) << std::endl;
+
+    Measure t;
+    // compare different approaches
+    std::vector<float> pic_nint = t.comparePC(pc_raw_pic, pc_comp_pic, bb);
+    std::vector<float> pic_int = t.comparePC(pc_raw_pic, pc_comp_int_pic, bb);
+    std::vector<float> pic_pc = t.comparePC(pc_raw_pic, pc_pcc, bb);
+    std::vector<float> pc_pic = t.comparePC(pc_pcc, pc_raw_pic, bb);
+
+    // print results
+    std::cout << "avg Error" << ", ";
+    std::cout << "max Error" << ", ";
+    std::cout << "avg ClrError" << ", ";
+    std::cout << "max ClrError" << std::endl;
+    std::cout << "Results for Pic with itself without interframe" << std::endl;
+    std::cout << pic_nint[0] << ", ";
+    std::cout << pic_nint[2] << ", ";
+    std::cout << pic_nint[3] << ", ";
+    std::cout << pic_nint[5] << std::endl;
+    std::cout << std::endl;
+
+    std::cout << "Results for Pic with itself with interframe" << std::endl;
+    std::cout << pic_int[0] << ", ";
+    std::cout << pic_int[2] << ", ";
+    std::cout << pic_int[3] << ", ";
+    std::cout << pic_int[5] << std::endl;
+    std::cout << std::endl;
+
+    std::cout << "Results for Pic with PC" << std::endl;
+    std::cout << pic_pc[0] << ", ";
+    std::cout << pic_pc[2] << ", ";
+    std::cout << pic_pc[3] << ", ";
+    std::cout << pic_pc[5] << std::endl;
+    std::cout << pc_pic[0] << ", ";
+    std::cout << pc_pic[2] << ", ";
+    std::cout << pc_pic[3] << ", ";
+    std::cout << pc_pic[5] << std::endl;
 
     return 0;
 }
