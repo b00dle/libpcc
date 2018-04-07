@@ -34,6 +34,7 @@ public:
             , verbose(false)
             , irrelevance_coding(true)
             , entropy_coding(true)
+            , appendix_size(0)
         {}
 
         EncodingSettings(const EncodingSettings&) = default;
@@ -66,6 +67,7 @@ public:
         int num_threads;
         bool irrelevance_coding;
         bool entropy_coding;
+        unsigned long appendix_size;
     };
 
     struct EncodeLog {
@@ -95,29 +97,43 @@ private:
     typedef std::map<Vec<uint64_t>, std::pair<Vec<uint64_t>, int>> PropertyMap;
     typedef std::pair<Vec<uint64_t>, std::pair<Vec<uint64_t>, int>> PropertyPair;
 
-
+    /*
+     * Data transfer object for encoding first chunk in a message.
+     * Holds general info about encoded data,
+     * such as whether or not entropy encoding has been performed
+     * and how large the message appendix is.
+    */
     struct GlobalHeader {
-      bool entropy_coding;
-      unsigned long uncompressed_size;
+        GlobalHeader()
+            : entropy_coding(false)
+            , uncompressed_size(0)
+            , appendix_size(0)
+        {}
 
-      static size_t getByteSize()
-      {
-          return sizeof(bool) + sizeof(uncompressed_size);
-      }
+        bool entropy_coding;
+        unsigned long uncompressed_size;
+        unsigned long appendix_size;
 
-      const std::string toString()
-      {
-        std::stringstream ss;
-        ss << "GlobalHeader([entropy_coding = " << entropy_coding << "], ";
-        ss << "[uncompressed_size = " << uncompressed_size << "])";
-        return ss.str();
-      }
+        static size_t getByteSize()
+        {
+            return sizeof(bool) + 2*sizeof(unsigned long);
+        }
+
+        const std::string toString()
+        {
+            std::stringstream ss;
+            ss << "GlobalHeader(entropy_coding = " << entropy_coding << ", ";
+            ss << "uncompressed_size = " << uncompressed_size << ", ";
+            ss << "appendix_size = " << appendix_size << ")";
+            return ss.str();
+        }
     };
 
     /*
-     * Data transfer object for encoding first chunk in a message
-     * which contains a PointCloudGrid.
-     * Holds general meta info about a PointCloudGrid
+     * Data transfer object for encoding general meta
+     * info about a PointCloudGrid.
+     * Appears right after GlobalHeader,
+     * but might be entropy encoded.
     */
     struct GridHeader {
         Vec8 dimensions;
@@ -199,9 +215,28 @@ public:
        Value will be 0 if no encode/decode performed yet. */
     const PointCloudGrid* getPointCloudGrid() const;
 
-private:
+    /* Inserts optional contents into given zmq::message_t.
+     * Can be used to transmit arbitrary contents along with message.
+     * msg has to be of format produced by encoder.
+     * size can have maximum value as determined by
+     * appendix_size in msg GlobalHeader.
+     * Use PointCloudGridEncoder::settings.appendix_size
+     * to allocate enough space prior to calling encode.
+     * Returns success of operation.
+     */
+    bool writeToAppendix(zmq::message_t& msg, unsigned char* data, unsigned long size);
+    bool writeToAppendix(zmq::message_t& msg, const std::string& text);
 
-    zmq::message_t prependGlobalHeader(zmq::message_t msg);
+    /* Retrieves appendix contents from given zmq:message_t.
+     * msg has to be of format produced by encoder.
+     * Returns size of appendix.
+    */
+    unsigned long readFromAppendix(zmq::message_t& msg, unsigned char*& data);
+    void readFromAppendix(zmq::message_t& msg, std::string& text);
+
+private:
+    /* Prepends GlobalHeader and adds space for appendix. */
+    zmq::message_t finalizeMessage(zmq::message_t msg);
 
     zmq::message_t entropyCompression(zmq::message_t msg);
 
