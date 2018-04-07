@@ -39,22 +39,22 @@ public:
 
         EncodingSettings(const EncodingSettings&) = default;
 
-        Vec<float> const getQuantizationStepSize(int cell_idx) const 
+        Vec<float> const getQuantizationStepSize(int cell_idx) const
         {
             if(cell_idx >= grid_precision.point_precision.size() || cell_idx < 0) {
                 std::cout << "NOTIFICATION: invalid cell_idx for call to getQuantizationStepSize" << std::endl;
                 std::cout << "  > got:" << cell_idx;
                 std::cout << "  > valid range: [0," << grid_precision.point_precision.size()-1 << "]." << std::endl;
             }
-            
+
             BoundingBox bb(grid_precision.bounding_box);
             Vec8 dimensions(grid_precision.dimensions);
             Vec<int> num_quant_values(
-                pow(2, grid_precision.point_precision[cell_idx].x), 
-                pow(2, grid_precision.point_precision[cell_idx].y), 
-                pow(2, grid_precision.point_precision[cell_idx].z)
-            );  
-            
+                pow(2, static_cast<int>(grid_precision.point_precision[cell_idx].x)),
+                pow(2, static_cast<int>(grid_precision.point_precision[cell_idx].y)),
+                pow(2, static_cast<int>(grid_precision.point_precision[cell_idx].z))
+            );
+
             Vec<float> quant_step;
             quant_step.x = ((bb.max.x-bb.min.x) / dimensions.x) / num_quant_values.x;
             quant_step.y = ((bb.max.y-bb.min.y) / dimensions.y) / num_quant_values.y;
@@ -70,8 +70,26 @@ public:
         unsigned long appendix_size;
     };
 
-    EncodingSettings settings;
+    struct EncodeLog {
+        time_t comp_time;
+        time_t encode_time;
+        time_t entropy_compress_time;
+        size_t raw_byte_size;
+        size_t comp_byte_size;
+    };
 
+    struct DecodeLog {
+        time_t decomp_time;
+        time_t decode_time;
+        time_t entropy_decompress_time;
+        size_t total_cell_header_size;
+        size_t global_header_size;
+        size_t black_list_size;
+    };
+
+    EncodingSettings settings;
+    EncodeLog encode_log;
+    DecodeLog decode_log;
 private:
     template<typename C>
     using GridVec = std::vector<std::vector<Vec<C>>>;
@@ -191,9 +209,9 @@ public:
     bool decode(zmq::message_t& msg, std::vector<UncompressedVoxel>* point_cloud);
 
     /* Returns a reference to the PointCloudGrid maintained by this instance.
-       After encode, this will contain the respective grid 
+       After encode, this will contain the respective grid
        setup from given std::vector<UncompressedVoxel> using this->settings.
-       Value returned is read only. 
+       Value returned is read only.
        Value will be 0 if no encode/decode performed yet. */
     const PointCloudGrid* getPointCloudGrid() const;
 
