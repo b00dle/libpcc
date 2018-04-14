@@ -27,7 +27,14 @@ public:
   std::time_t stopWatch();
 
   // PointCloud Analytics Functions
-  float meanSquaredErrorPC(PointCloud<Vec<float>, Vec<float>>, PointCloud<Vec<float>, Vec<float>>);
+  std::vector<float> comparePC(PointCloud<Vec<float>, Vec<float>> const&, PointCloud<Vec<float>, Vec<float>> const&, BoundingBox const&);
+  void printResultsPC(std::vector<float>);
+
+  float colorErrorYuv(Vec<float>, Vec<float>);
+  float colorErrorYuvWithoutY(Vec<float>, Vec<float>);
+  float colorErrorCielab(Vec<float>, Vec<float>);
+  float colorErrorXyz(Vec<float>, Vec<float>);
+  float calcVariance(std::list<float>);
 
 private:
 time_point<system_clock> m_start_time;
