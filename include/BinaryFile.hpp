@@ -4,6 +4,11 @@
 #include <string>
 #include <zmq.hpp>
 
+/**
+ * Wrapper for binary file read and write functionality.
+ * Can be used to store and extract
+ * compressed and uncompressed point cloud data.
+*/
 class BinaryFile {
 public:
     BinaryFile();

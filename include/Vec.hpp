@@ -5,9 +5,10 @@
 #include <cstdlib>
 #include <iostream>
 
-/*
- * Template Class to encapsulate 3 component Vector
+/**
+ * Template Data transfer object to describe a 3 component Vector
  * with C as component type.
+ * Provides basic arithmetic interface and hash function.
 */
 template <typename C>
 struct Vec {
@@ -52,16 +53,6 @@ struct Vec {
     }
 
     size_t hash() const {
-        /*
-        size_t hx = std::hash<C>()(x);
-        size_t hy = std::hash<C>()(y);
-        size_t hz = std::hash<C>()(z);
-        size_t h = 0;
-        h = h | hx;
-        h = h | hy << 8;
-        h = h | hz << 16;
-        return h;
-        */
         size_t h = 0;
         h = h | x;
         h = h | y << 8;
@@ -79,22 +70,16 @@ struct Vec {
         return out;
     }
 
-    /*std::ostream& operator<<(std::ostream& stream, const Vec<C>& rhs) {
-        stream << "[" << rhs.x << "," << rhs.y << "," << rhs.z << "," << "]";
-        return stream;
-    }*/
-
     C x;
     C y;
     C z;
 };
 
-/*
- * Vec of uint8_t Components.
+/**
+ * 3D vector of uint8_t component type.
  * Defines interface for calculating a 32 bit integer key
  * unique per possible Vec<uint_8> value.
- * key() can be used for sort operations.
- * Defines basic logical == operation.
+ * Defines basic logical operations.
 */
 struct Vec8 : Vec<uint8_t> {
     explicit Vec8(uint8_t x_t=0, uint8_t y_t=0, uint8_t z_t=0)
@@ -108,15 +93,6 @@ struct Vec8 : Vec<uint8_t> {
     {}
 
     /*virtual*/ ~Vec8() = default;
-
-    uint32_t key()
-    {
-        uint32_t res = 0;
-        res = res | x;
-        res = res | y << 8;
-        res = res | z << 16;
-        return res;
-    }
 
     bool operator==(const Vec8& rhs) const {
         return x == rhs.x &&

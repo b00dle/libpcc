@@ -8,7 +8,7 @@ find_package(PkgConfig REQUIRED)
 find_package(OpenMP)
 if (OPENMP_FOUND)
     set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
-    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS} -Werror")
 endif()
 
 pkg_check_modules(ZMQ REQUIRED libzmq)
@@ -24,11 +24,10 @@ add_executable(libpcc
         examples/test_cmdp.cpp
         include/CMDParser.hpp
         include/Encoder.hpp
-        include/PointCloud.hpp
         src/CMDParser.cpp
         src/Encoder.cpp
-        include/Measurement.hpp
-        src/Measurement.cpp
+        include/Measure.hpp
+        src/Measure.cpp
         include/BitVec.hpp
         include/PointCloudGrid.hpp
         include/PointCloudGridEncoder.hpp
