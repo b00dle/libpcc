@@ -1,6 +1,6 @@
 #include <zmq.hpp>
 
-#include "../include/Measurement.hpp"
+#include "../include/Measure.hpp"
 #include "../include/CMDParser.hpp"
 #include "../include/PointCloudGridEncoder.hpp"
 #include "../include/BinaryFile.hpp"

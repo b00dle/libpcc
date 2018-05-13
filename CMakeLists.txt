@@ -27,8 +27,8 @@ add_executable(libpcc
         include/PointCloud.hpp
         src/CMDParser.cpp
         src/Encoder.cpp
-        include/Measurement.hpp
-        src/Measurement.cpp
+        include/Measure.hpp
+        src/Measure.cpp
         include/BitVec.hpp
         include/PointCloudGrid.hpp
         include/PointCloudGridEncoder.hpp

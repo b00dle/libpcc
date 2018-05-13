@@ -8,7 +8,7 @@
 
 #include "zlib.h"
 
-#include "../include/Measurement.hpp"
+#include "../include/Measure.hpp"
 
 void removeTailingWhitespaces(std::string& str)
 {
