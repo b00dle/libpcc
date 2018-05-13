@@ -34,26 +34,27 @@ public:
             , verbose(false)
             , irrelevance_coding(true)
             , entropy_coding(true)
+            , appendix_size(0)
         {}
 
         EncodingSettings(const EncodingSettings&) = default;
 
-        Vec<float> const getQuantizationStepSize(int cell_idx) const 
+        Vec<float> const getQuantizationStepSize(int cell_idx) const
         {
             if(cell_idx >= grid_precision.point_precision.size() || cell_idx < 0) {
                 std::cout << "NOTIFICATION: invalid cell_idx for call to getQuantizationStepSize" << std::endl;
                 std::cout << "  > got:" << cell_idx;
                 std::cout << "  > valid range: [0," << grid_precision.point_precision.size()-1 << "]." << std::endl;
             }
-            
+
             BoundingBox bb(grid_precision.bounding_box);
             Vec8 dimensions(grid_precision.dimensions);
             Vec<int> num_quant_values(
-                pow(2, grid_precision.point_precision[cell_idx].x), 
-                pow(2, grid_precision.point_precision[cell_idx].y), 
-                pow(2, grid_precision.point_precision[cell_idx].z)
-            );  
-            
+                pow(2, static_cast<int>(grid_precision.point_precision[cell_idx].x)),
+                pow(2, static_cast<int>(grid_precision.point_precision[cell_idx].y)),
+                pow(2, static_cast<int>(grid_precision.point_precision[cell_idx].z))
+            );
+
             Vec<float> quant_step;
             quant_step.x = ((bb.max.x-bb.min.x) / dimensions.x) / num_quant_values.x;
             quant_step.y = ((bb.max.y-bb.min.y) / dimensions.y) / num_quant_values.y;
@@ -66,10 +67,29 @@ public:
         int num_threads;
         bool irrelevance_coding;
         bool entropy_coding;
+        unsigned long appendix_size;
+    };
+
+    struct EncodeLog {
+        time_t comp_time;
+        time_t encode_time;
+        time_t entropy_compress_time;
+        size_t raw_byte_size;
+        size_t comp_byte_size;
+    };
+
+    struct DecodeLog {
+        time_t decomp_time;
+        time_t decode_time;
+        time_t entropy_decompress_time;
+        size_t total_cell_header_size;
+        size_t global_header_size;
+        size_t black_list_size;
     };
 
     EncodingSettings settings;
-
+    EncodeLog encode_log;
+    DecodeLog decode_log;
 private:
     template<typename C>
     using GridVec = std::vector<std::vector<Vec<C>>>;
@@ -77,29 +97,43 @@ private:
     typedef std::map<Vec<uint64_t>, std::pair<Vec<uint64_t>, int>> PropertyMap;
     typedef std::pair<Vec<uint64_t>, std::pair<Vec<uint64_t>, int>> PropertyPair;
 
-
+    /*
+     * Data transfer object for encoding first chunk in a message.
+     * Holds general info about encoded data,
+     * such as whether or not entropy encoding has been performed
+     * and how large the message appendix is.
+    */
     struct GlobalHeader {
-      bool entropy_coding;
-      unsigned long uncompressed_size;
+        GlobalHeader()
+            : entropy_coding(false)
+            , uncompressed_size(0)
+            , appendix_size(0)
+        {}
 
-      static size_t getByteSize()
-      {
-          return sizeof(bool) + sizeof(uncompressed_size);
-      }
+        bool entropy_coding;
+        unsigned long uncompressed_size;
+        unsigned long appendix_size;
 
-      const std::string toString()
-      {
-        std::stringstream ss;
-        ss << "GlobalHeader([entropy_coding = " << entropy_coding << "], ";
-        ss << "[uncompressed_size = " << uncompressed_size << "])";
-        return ss.str();
-      }
+        static size_t getByteSize()
+        {
+            return sizeof(bool) + 2*sizeof(unsigned long);
+        }
+
+        const std::string toString()
+        {
+            std::stringstream ss;
+            ss << "GlobalHeader(entropy_coding = " << entropy_coding << ", ";
+            ss << "uncompressed_size = " << uncompressed_size << ", ";
+            ss << "appendix_size = " << appendix_size << ")";
+            return ss.str();
+        }
     };
 
     /*
-     * Data transfer object for encoding first chunk in a message
-     * which contains a PointCloudGrid.
-     * Holds general meta info about a PointCloudGrid
+     * Data transfer object for encoding general meta
+     * info about a PointCloudGrid.
+     * Appears right after GlobalHeader,
+     * but might be entropy encoded.
     */
     struct GridHeader {
         Vec8 dimensions;
@@ -175,15 +209,34 @@ public:
     bool decode(zmq::message_t& msg, std::vector<UncompressedVoxel>* point_cloud);
 
     /* Returns a reference to the PointCloudGrid maintained by this instance.
-       After encode, this will contain the respective grid 
+       After encode, this will contain the respective grid
        setup from given std::vector<UncompressedVoxel> using this->settings.
-       Value returned is read only. 
+       Value returned is read only.
        Value will be 0 if no encode/decode performed yet. */
     const PointCloudGrid* getPointCloudGrid() const;
 
-private:
+    /* Inserts optional contents into given zmq::message_t.
+     * Can be used to transmit arbitrary contents along with message.
+     * msg has to be of format produced by encoder.
+     * size can have maximum value as determined by
+     * appendix_size in msg GlobalHeader.
+     * Use PointCloudGridEncoder::settings.appendix_size
+     * to allocate enough space prior to calling encode.
+     * Returns success of operation.
+     */
+    bool writeToAppendix(zmq::message_t& msg, unsigned char* data, unsigned long size);
+    bool writeToAppendix(zmq::message_t& msg, const std::string& text);
 
-    zmq::message_t prependGlobalHeader(zmq::message_t msg);
+    /* Retrieves appendix contents from given zmq:message_t.
+     * msg has to be of format produced by encoder.
+     * Returns size of appendix.
+    */
+    unsigned long readFromAppendix(zmq::message_t& msg, unsigned char*& data);
+    void readFromAppendix(zmq::message_t& msg, std::string& text);
+
+private:
+    /* Prepends GlobalHeader and adds space for appendix. */
+    zmq::message_t finalizeMessage(zmq::message_t msg);
 
     zmq::message_t entropyCompression(zmq::message_t msg);
 

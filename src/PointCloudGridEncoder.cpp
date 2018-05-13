@@ -3,10 +3,17 @@
 #include <set>
 #include <omp.h>
 #include <map>
+#include <algorithm>
+#include <regex>
 
 #include "zlib.h"
 
 #include "../include/Measurement.hpp"
+
+void removeTailingWhitespaces(std::string& str)
+{
+    str = std::regex_replace(str, std::regex(" +$"), "");
+}
 
 PointCloudGridEncoder::PointCloudGridEncoder(const EncodingSettings& s)
     : Encoder()
@@ -39,7 +46,7 @@ zmq::message_t PointCloudGridEncoder::encode(PointCloud<Vec<float>, Vec<float>>*
     if(settings.entropy_coding) {
       return entropyCompression(encodePointCloudGrid());
     } else {
-      return prependGlobalHeader(encodePointCloudGrid());
+      return finalizeMessage(encodePointCloudGrid());
     }
 };
 
@@ -55,7 +62,7 @@ zmq::message_t PointCloudGridEncoder::encode(const std::vector<UncompressedVoxel
     if(settings.entropy_coding) {
       return entropyCompression(encodePointCloudGrid());
     } else {
-      return prependGlobalHeader(encodePointCloudGrid());
+      return finalizeMessage(encodePointCloudGrid());
     }
 };
 
@@ -82,18 +89,67 @@ const PointCloudGrid* PointCloudGridEncoder::getPointCloudGrid() const
     return pc_grid_;
 }
 
-zmq::message_t PointCloudGridEncoder::prependGlobalHeader(zmq::message_t msg) {
-  global_header_->entropy_coding = false;
-  global_header_->uncompressed_size = msg.size();
+bool PointCloudGridEncoder::writeToAppendix(zmq::message_t& msg, unsigned char* data, unsigned long size)
+{
+    decodeGlobalHeader(msg);
+    if(size > global_header_->appendix_size)
+        return false;
+    memcpy((unsigned char*) msg.data() + msg.size() - global_header_->appendix_size, data, size);
+    return true;
+}
 
-  zmq::message_t out_msg(msg.size() + GlobalHeader::getByteSize());
+bool PointCloudGridEncoder::writeToAppendix(zmq::message_t& msg, const std::string& text) {
+    unsigned char* data = new unsigned char[text.size()];
+    memcpy(data, text.data(), text.size());
+    bool success = writeToAppendix(msg, data, text.size());
+    delete [] data;
+    return success;
+}
 
-  int offset = encodeGlobalHeader(out_msg);
+unsigned long PointCloudGridEncoder::readFromAppendix(zmq::message_t& msg, unsigned char*& data)
+{
+    decodeGlobalHeader(msg);
+    if(global_header_->appendix_size > 0) {
+        data = new unsigned char[global_header_->appendix_size];
+        memcpy(data, (unsigned char *) msg.data() + msg.size() - global_header_->appendix_size,
+               global_header_->appendix_size);
+    }
+    return global_header_->appendix_size;
+}
 
-  memcpy((unsigned char*) out_msg.data() + offset,
+void PointCloudGridEncoder::readFromAppendix(zmq::message_t& msg, std::string& text)
+{
+    text = "";
+    unsigned char* data;
+    unsigned long size = readFromAppendix(msg, data);
+    text.append(reinterpret_cast<const char*>(data));
+    if(size < text.size())
+        text = text.substr(0, size);
+    removeTailingWhitespaces(text);
+    //stripUnicode(text);
+    delete [] data;
+}
+
+zmq::message_t PointCloudGridEncoder::finalizeMessage(zmq::message_t msg) {
+    global_header_->entropy_coding = false;
+    global_header_->uncompressed_size = msg.size();
+    global_header_->appendix_size = settings.appendix_size;
+
+    zmq::message_t out_msg(
+        msg.size() +
+        GlobalHeader::getByteSize() +
+        global_header_->appendix_size
+    );
+
+    int offset = encodeGlobalHeader(out_msg);
+
+    memcpy((unsigned char*) out_msg.data() + offset,
      (unsigned char*) msg.data(), msg.size());
 
-  return out_msg;
+    if(settings.appendix_size > 0)
+        writeToAppendix(out_msg, std::string(settings.appendix_size, ' '));
+
+    return out_msg;
 }
 
 zmq::message_t PointCloudGridEncoder::entropyCompression(zmq::message_t msg) {
@@ -101,6 +157,7 @@ zmq::message_t PointCloudGridEncoder::entropyCompression(zmq::message_t msg) {
     t.startWatch();
     global_header_->entropy_coding = true;
     global_header_->uncompressed_size = msg.size();
+    global_header_->appendix_size = settings.appendix_size;
 
     unsigned long size_compressed = (msg.size() * 1.1) + 12;
     unsigned char* entropy_compressed = new unsigned char[size_compressed];//(unsigned char*) malloc(size_compressed);
@@ -124,11 +181,20 @@ zmq::message_t PointCloudGridEncoder::entropyCompression(zmq::message_t msg) {
         break;
     }
 
-    zmq::message_t out_msg(size_compressed + GlobalHeader::getByteSize());
+    zmq::message_t out_msg(
+        size_compressed +
+        GlobalHeader::getByteSize() +
+        global_header_->appendix_size
+    );
     int offset = encodeGlobalHeader(out_msg);
     memcpy((unsigned char*) out_msg.data() + offset, entropy_compressed, size_compressed);
+    if(settings.appendix_size > 0)
+        writeToAppendix(out_msg, std::string(settings.appendix_size, ' '));
 
     delete [] entropy_compressed;
+
+    encode_log.entropy_compress_time = t.stopWatch();
+
     if(settings.verbose) {
         std::cout << "ENTROPY COMPRESSION done." << std::endl;
         std::cout << "  > took " << t.stopWatch() << "ms." << std::endl;
@@ -141,8 +207,9 @@ zmq::message_t PointCloudGridEncoder::entropyCompression(zmq::message_t msg) {
 zmq::message_t PointCloudGridEncoder::entropyDecompression(zmq::message_t& msg, size_t offset) {
     Measure t;
     t.startWatch();
+    unsigned long compressed_size = msg.size() - offset - global_header_->appendix_size;
     zmq::message_t msg_uncompressed(global_header_->uncompressed_size);
-    int z_result = uncompress((unsigned char*) msg_uncompressed.data(), &global_header_->uncompressed_size, (unsigned char*)msg.data() + offset, global_header_->uncompressed_size);
+    int z_result = uncompress((unsigned char*) msg_uncompressed.data(), &global_header_->uncompressed_size, (unsigned char*)msg.data() + offset, compressed_size);
     switch( z_result )
     {
     case Z_OK:
@@ -152,14 +219,17 @@ zmq::message_t PointCloudGridEncoder::entropyDecompression(zmq::message_t& msg, 
 
     case Z_MEM_ERROR:
         printf("FAILURE [zlib]: out of memory.\n  > Exiting.");
-        exit(1);    // quit.
-        break;
+        exit(1);
 
     case Z_BUF_ERROR:
         printf("FAILURE [zlib]: output buffer wasn't large enough!\n  > Exiting.");
-        exit(1);    // quit.
+        exit(1);
+
+    default:
         break;
     }
+
+    decode_log.entropy_decompress_time = t.stopWatch();
 
     if(settings.verbose) {
         std::cout << "ENTROPY DECOMPRESSION done." << std::endl;
@@ -237,6 +307,9 @@ void PointCloudGridEncoder::buildPointCloudGrid(PointCloud<Vec<float>, Vec<float
 
     time_t fill_grid = t.stopWatch();
 
+    encode_log.comp_time = fill_grid;
+    encode_log.raw_byte_size = point_cloud->size() * sizeof(UncompressedVoxel);
+
     if(settings.verbose) {
         std::cout << "DONE building grid\n";
         std::cout << "  > took " << fill_grid << "ms.\n";
@@ -274,6 +347,8 @@ void PointCloudGridEncoder::buildPointCloudGrid(const std::vector<UncompressedVo
 
     if(num_points < 0)
         num_points = point_cloud.size();
+
+    encode_log.raw_byte_size = point_cloud.size() * sizeof(UncompressedVoxel);
 
     if(settings.verbose) {
         std::cout << "POINT CLOUD\n";
@@ -326,6 +401,10 @@ void PointCloudGridEncoder::buildPointCloudGrid(const std::vector<UncompressedVo
                 ++elmnt_idx;
             }
         }
+
+        time_t fill_grid = t.stopWatch();
+
+        encode_log.comp_time = fill_grid;
 
         if(settings.verbose) {
             std::cout << "POINTS DISCARDED \n";
@@ -394,6 +473,8 @@ void PointCloudGridEncoder::buildPointCloudGrid(const std::vector<UncompressedVo
         }
 
         time_t fill_grid = t.stopWatch();
+
+        encode_log.comp_time = fill_grid;
 
         if(settings.verbose) {
             std::cout << "DONE building grid\n";
@@ -480,10 +561,11 @@ bool PointCloudGridEncoder::extractPointCloudFromGrid(PointCloud<Vec<float>, Vec
             point_cloud->colors[point_idx[cell_idx][j]] = clr;
         }
     }
+    decode_log.decomp_time = m.stopWatch();
 
     if(settings.verbose) {
         std::cout << "DECOMPRESSION done.\n";
-        std::cout << "  > took " << m.stopWatch() << "ms.\n";
+        std::cout << "  > took " << decode_log.decomp_time << "ms.\n";
     }
 
     return true;//point_idx == point_cloud->size();
@@ -572,9 +654,11 @@ bool PointCloudGridEncoder::extractPointCloudFromGrid(std::vector<UncompressedVo
         }
     }
 
+    decode_log.decomp_time = m.stopWatch();
+
     if(settings.verbose) {
         std::cout << "DECOMPRESSION done.\n";
-        std::cout << "  > took " << m.stopWatch() << "ms.\n";
+        std::cout << "  > took " << decode_log.decomp_time << "ms.\n";
     }
 
     return true;//point_idx == point_cloud->size();
@@ -614,7 +698,6 @@ zmq::message_t PointCloudGridEncoder::encodePointCloudGrid() {
 
     // calc overall message size and init message
     size_t message_size_bytes = calcMessageSize(cell_headers);
-
     zmq::message_t message(message_size_bytes);
 
     size_t offset = encodeGridHeader(message);
@@ -663,9 +746,12 @@ zmq::message_t PointCloudGridEncoder::encodePointCloudGrid() {
 
     time_t post_cells = m.stopWatch();
 
+    encode_log.encode_time = post_cells;
+    encode_log.comp_byte_size = message_size_bytes;
+
     if(settings.verbose) {
         std::cout << "ENCODING done.\n";
-        std::cout << "  > took " << post_cells << "ms.\n";
+        std::cout << "  > took " << encode_log.encode_time << "ms.\n";
         std::cout << "    > pre-encode cells " << pre_cells << "ms.\n";
         std::cout << "    > encode cells " << post_cells-pre_cells << "ms.\n";
     }
@@ -766,6 +852,8 @@ bool PointCloudGridEncoder::decodePointCloudGrid(zmq::message_t& msg)
             std::cout << "WARNING: No points in cell\n  > Cell should've been blacklisted.\n";
         }
     }
+    
+    decode_log.total_cell_header_size = cell_headers.size() * CellHeader::getByteSize();
 
     while(!cell_headers.empty()) {
         delete cell_headers.back();
@@ -773,6 +861,10 @@ bool PointCloudGridEncoder::decodePointCloudGrid(zmq::message_t& msg)
     }
 
     time_t post_cell_decode = t.stopWatch();
+
+    decode_log.decode_time = post_cell_decode;
+    decode_log.black_list_size = header_->num_blacklist*sizeof(unsigned);
+    decode_log.global_header_size = GlobalHeader::getByteSize();
 
     if(settings.verbose) {
         std::cout << "DECODING CELLS done.\n  > took " << post_cell_decode << "ms.\n";
@@ -790,10 +882,11 @@ size_t PointCloudGridEncoder::encodeGlobalHeader(zmq::message_t &msg, size_t off
     memcpy((unsigned char*) msg.data() + offset,(unsigned char*) entropy_coding, sizeof(bool));
     offset += sizeof(bool);
 
-    auto uncompressed_size = new unsigned long[1];
+    auto uncompressed_size = new unsigned long[2];
     uncompressed_size[0] = global_header_->uncompressed_size;
-    memcpy((unsigned char*) msg.data() + offset, (unsigned char*) uncompressed_size, sizeof(unsigned long));
-    offset += sizeof(unsigned long);
+    uncompressed_size[1] = global_header_->appendix_size;
+    memcpy((unsigned char*) msg.data() + offset, (unsigned char*) uncompressed_size, 2*sizeof(unsigned long));
+    offset += 2*sizeof(unsigned long);
 
     // cleanup
     delete [] entropy_coding;
@@ -807,10 +900,11 @@ size_t PointCloudGridEncoder::decodeGlobalHeader(zmq::message_t &msg, size_t off
     global_header_->entropy_coding = entropy_coding[0];
     offset += sizeof(bool);
 
-    auto uncompressed_size = new unsigned long[1];
-    memcpy((unsigned char*) uncompressed_size, (unsigned char*) msg.data() + offset, sizeof(unsigned long));
+    auto uncompressed_size = new unsigned long[2];
+    memcpy((unsigned char*) uncompressed_size, (unsigned char*) msg.data() + offset, 2*sizeof(unsigned long));
     global_header_->uncompressed_size = uncompressed_size[0];
-    offset += sizeof(unsigned long);
+    global_header_->appendix_size = uncompressed_size[1];
+    offset += 2*sizeof(unsigned long);
 
     // cleanup
     delete [] entropy_coding;
