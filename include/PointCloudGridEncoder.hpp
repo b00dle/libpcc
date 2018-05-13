@@ -195,16 +195,12 @@ public:
     explicit PointCloudGridEncoder(const EncodingSettings& s = EncodingSettings());
     ~PointCloudGridEncoder();
 
-    /* Compresses given PointCloud and creates message from it. */
-    zmq::message_t encode(PointCloud<Vec<float>, Vec<float>>* point_cloud);
     /* Compresses given UncompressedPointCloud and creates message from it.
        Optionally num_points specifies how many UncompressedVoxels in point_cloud
        will be encoded range [0,num_points-1]. If num_points < 0 all points will be
        considered. */
     zmq::message_t encode(const std::vector<UncompressedVoxel>& point_cloud, int num_points=-1);
 
-    /* Decodes given message into point_cloud. Returns success. */
-    bool decode(zmq::message_t& msg, PointCloud<Vec<float>, Vec<float>>* point_cloud);
     /* Decodes given message into point_cloud. Returns success. */
     bool decode(zmq::message_t& msg, std::vector<UncompressedVoxel>* point_cloud);
 
@@ -242,19 +238,8 @@ private:
 
     zmq::message_t entropyDecompression(zmq::message_t& msg, size_t offset);
 
-
-    /* Fills pc_grid_ from given point_cloud and settings */
-    void buildPointCloudGrid(PointCloud<Vec<float>, Vec<float>>* point_cloud);
-
     /* Fills pc_grid_ from given point_cloud and settings */
     void buildPointCloudGrid(const std::vector<UncompressedVoxel>& point_cloud, int num_points);
-
-    /*
-     * Extracts a PointCloud from pc_grid_.
-     * Results are stored in pc parameter.
-     * Returns success of operation.
-    */
-    bool extractPointCloudFromGrid(PointCloud<Vec<float>, Vec<float>>* point_cloud);
 
     /*
      * Extracts a PointCloud from pc_grid_.
