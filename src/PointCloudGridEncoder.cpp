@@ -937,17 +937,6 @@ size_t PointCloudGridEncoder::decodeCell(zmq::message_t &msg, CellHeader *c_head
     return offset;
 }
 
-unsigned PointCloudGridEncoder::calcGridCellIndex(const Vec<float> &pos, const Vec<float>& cell_range) const {
-    Vec<float> temp(pos);
-    temp -= pc_grid_->bounding_box.min;
-    auto x_idx = static_cast<unsigned>(floor(static_cast<double>(temp.x / cell_range.x)));
-    auto y_idx = static_cast<unsigned>(floor(static_cast<double>(temp.y / cell_range.y)));
-    auto z_idx = static_cast<unsigned>(floor(static_cast<double>(temp.z / cell_range.z)));
-    return x_idx +
-        y_idx * pc_grid_->dimensions.x +
-        z_idx * pc_grid_->dimensions.x * pc_grid_->dimensions.y;
-}
-
 unsigned PointCloudGridEncoder::calcGridCellIndex(const float pos[3], const Vec<float>& cell_range) const {
     Vec<float> temp(pos[0], pos[1], pos[2]);
     temp -= pc_grid_->bounding_box.min;
@@ -957,24 +946,6 @@ unsigned PointCloudGridEncoder::calcGridCellIndex(const float pos[3], const Vec<
     return x_idx +
            y_idx * pc_grid_->dimensions.x +
            z_idx * pc_grid_->dimensions.x * pc_grid_->dimensions.y;
-}
-
-const Vec<float> PointCloudGridEncoder::mapToCell(const Vec<float> &pos, const Vec<float> &cell_range)
-{
-    Vec<float> cell_pos(pos.x, pos.y, pos.z);
-    cell_pos -= pc_grid_->bounding_box.min;
-    float x_steps = cell_pos.x / cell_range.x;
-    float y_steps = cell_pos.y / cell_range.y;
-    float z_steps = cell_pos.z / cell_range.z;
-    // normalized cell_pos ([0,0,0]-[1,1,1])
-    cell_pos.x = x_steps - static_cast<float>(floor(static_cast<double>(x_steps)));
-    cell_pos.y = y_steps - static_cast<float>(floor(static_cast<double>(y_steps)));
-    cell_pos.z = z_steps - static_cast<float>(floor(static_cast<double>(z_steps)));
-    // actual pos
-    cell_pos.x *= cell_range.x;
-    cell_pos.y *= cell_range.y;
-    cell_pos.z *= cell_range.z;
-    return cell_pos;
 }
 
 const Vec<float> PointCloudGridEncoder::mapToCell(const float pos[3], const Vec<float> &cell_range)

@@ -4,9 +4,9 @@
 #include <cstdlib>
 #import <bitset>
 
-/*
+/**
  * Used to denote component precision (amount of bits) in a BitValue.
- * Range [1,32]
+ * Provided range is [1,32].
 */
 enum BitCount {
     BIT_1 = 1,
@@ -43,8 +43,8 @@ enum BitCount {
     BIT_32 = 32
 };
 
-/*
- * Defines base interface for all template type BitValues.
+/**
+ * Defines base interface for all BitValues.
  * initBitValue (Helper function) can be called for
  * generic child class instantiation.
 */
@@ -60,7 +60,7 @@ struct AbstractBitValue {
     virtual void setBit(size_t pos, bool val) = 0;
 };
 
-/*
+/**
  * Template type Wrapping a std::bitset of size N.
  * Offers convenience functions for accessing and setting
  * data independent from template arguments.
@@ -99,7 +99,7 @@ struct BitValue : AbstractBitValue {
     std::bitset<N> data;
 };
 
-/*
+/**
  * Helper function to create child class instance
  * BitValue referenced by AbstractBitValue* v
  * with respect to given BitCount.

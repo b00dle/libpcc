@@ -2,45 +2,105 @@
 #define LIBPCC_ENCODER_HPP
 
 #include <cmath>
-#include "PointCloud.hpp"
+#include "BoundingBox.hpp"
+#include "Vec.hpp"
 #include "../include/BitVec.hpp"
 
+/**
+ * Defines general static mapping & conversion functions.
+ * Used as base class for PointCloudGridEncoder.
+*/
 class Encoder {
-
 public:
     Encoder() = default;
     virtual ~Encoder() = default;
 
-    ////////////////////////////////////////////
-    ////////// STATIC MAPPING HELPERS //////////
-    ////////////////////////////////////////////
-
+    /**
+     * Maps given value into [min, max] range.
+     * range_max defines fall back value for upper bounds clamping.
+    */
     static float mapToRange(float value, float min, float max, float range_max);
-    static uint32_t mapToBit(float value, float min, float max, uint8_t bits);
-    static float mapFromBit(uint32_t value, float min, float max, uint8_t bits, float invalid = 0.0f);
 
-    /*
-     * Maps 'from' vec into range determined by bb and bit range per component
-     * Results is returned as unsigned long to make sure values fit.
-     */
-     
-    // Color Conversion to YUV standard
+    /**
+     * Quantizes given value in range [min, max].
+     * Quantization step size is given by 2^bits.
+    */
+    static uint32_t mapToBit(float value, float min, float max, uint8_t bits);
+
+    /**
+     * Extracts given value from quantization range [min, max].
+     * Quantization step size is given by 2^bits.
+     * invalid value can be specfied as fallback if de-quantization fails (default is 0.0f).
+    */
+    static float mapFromBit(uint32_t value, float min, float max, uint8_t bits,
+                            float invalid = 0.0f);
+
+    /**
+     * Color Conversion to YUV standard.
+     * Given rgb components should be in range [0,1].
+    */
     static Vec<float> const rgbToYuv(Vec<float> const& rgb);
-    // Color Conversion to CIE - XYZ standard
+
+    /**
+     * Color Conversion to XYZ standard.
+     * Given rgb components should be in range [0,1].
+    */
     static Vec<float> const rgbToXyz(Vec<float> rgb);
-    // Color Conversion to CIE LAB standard
+
+    /**
+     * Color Conversion to Cielab standard.
+     * Given rgb components should be in range [0,1].
+    */
     static Vec<float> const rgbToCieLab(Vec<float> const& rgb);
-    // 8 bit representation to [0,1] representation
+
+    /**
+     * Value conversion from 8 bit [0,255] rgb color to 32 bit [0,1] colors.
+    */
     static Vec<float> const bit8ToRgb(const unsigned char from[4]);
 
-    static const Vec<uint64_t> mapVec(const Vec<float>& from, BoundingBox const& bb, const Vec<uint8_t>& bits);
-    static const Vec<uint64_t> mapVec(const unsigned char from[4], BoundingBox const& bb, const Vec<uint8_t>& bits);
-    static const Vec<uint64_t> mapVec(const Vec<float>& from, BoundingBox const& bb, const Vec<BitCount>& bits);
-    static const Vec<uint64_t> mapVec(const unsigned char from[4], BoundingBox const& bb, const Vec<BitCount>& bits);
-    static const Vec<float> mapVecToFloat(const Vec<uint64_t>& from, BoundingBox const& bb, const Vec<uint8_t>& bits);
-    static const Vec<float> mapVecToFloat(const unsigned char from[4], BoundingBox const& bb, const Vec<uint8_t>& bits);
-    static const Vec<float> mapVecToFloat(const Vec<uint64_t>& from, BoundingBox const& bb, const Vec<BitCount>& bits);
-    static const Vec<float> mapVecToFloat(const unsigned char from[4], BoundingBox const& bb, const Vec<BitCount>& bits);
+    /**
+     * Maps 'from' into range determined by bb and bit range per component.
+     * Result is returned as unsigned long to make sure values fit.
+    */
+    static const Vec<uint64_t> mapVec(const Vec<float>& from, BoundingBox const& bb,
+                                      const Vec<uint8_t>& bits);
+
+    /**
+     * Maps 'from' into range determined by bb and bit range per component.
+     * Result is returned as unsigned long to make sure values fit.
+    */
+    static const Vec<uint64_t> mapVec(const unsigned char from[4], BoundingBox const& bb,
+                                      const Vec<uint8_t>& bits);
+
+    /**
+     * Maps 'from' into range determined by bb and bit range per component.
+     * Result is returned as unsigned long to make sure values fit.
+    */
+    static const Vec<uint64_t> mapVec(const Vec<float>& from, BoundingBox const& bb,
+                                      const Vec<BitCount>& bits);
+
+    /**
+     * Maps 'from' into range determined by bb and bit range per component.
+     * Result is returned as unsigned long to make sure values fit.
+    */
+    static const Vec<uint64_t> mapVec(const unsigned char from[4], BoundingBox const& bb,
+                                      const Vec<BitCount>& bits);
+
+    /**
+     * Performs de-quantization on 'from' within given bounds
+     * and using component precision defined by 'bits'.
+     * Encoder::mapFromBit is used on every component.
+    */
+    static const Vec<float> mapVecToFloat(const Vec<uint64_t>& from, BoundingBox const& bb,
+                                          const Vec<uint8_t>& bits);
+
+    /**
+     * Performs de-quantization on 'from' within given bounds
+     * and using component precision defined by 'bits'.
+     * Encoder::mapFromBit is used on every component.
+    */
+    static const Vec<float> mapVecToFloat(const Vec<uint64_t>& from, BoundingBox const& bb,
+                                          const Vec<BitCount>& bits);
 };
 
 

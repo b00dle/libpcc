@@ -1,9 +1,14 @@
 #ifndef LIBPCC_POINT_CLOUD_GRID_HPP
 #define LIBPCC_POINT_CLOUD_GRID_HPP
 
-#include "../include/BitVecArray.hpp"
-#include "../include/PointCloud.hpp"
+#include "BitVecArray.hpp"
 
+/**
+ * Data transfer object defining a cell within a PointCloudGrid.
+ * a BitVecArray is used as the container type for both points and colors.
+ * Convenience functions are provided for initialization of
+ * point and color component bit counts and basic container interaction.
+*/
 struct GridCell {
     GridCell() = default;
 
@@ -46,6 +51,13 @@ struct GridCell {
     BitVecArray colors;
 };
 
+/**
+ * Data transfer object defining a point cloud grid as used by
+ * PointCloudGridEncoder to compress a point cloud.
+ * Position and color values are assigned to GridCells.
+ * Convenience functions are given for resizing of the grid
+ * and basic container interaction.
+*/
 struct PointCloudGrid {
     explicit PointCloudGrid(Vec8 const& t_dimensions=Vec8(4,4,4), const BoundingBox& t_bb=BoundingBox())
         : dimensions(t_dimensions)
@@ -95,9 +107,9 @@ struct PointCloudGrid {
         }
 
         Vec<int> num_quant_values(
-            pow(2, static_cast<int>(cells[cell_idx]->points.getNX())),
-            pow(2, static_cast<int>(cells[cell_idx]->points.getNY())),
-            pow(2, static_cast<int>(cells[cell_idx]->points.getNZ()))
+            static_cast<int>(pow(2, static_cast<int>(cells[cell_idx]->points.getNX()))),
+            static_cast<int>(pow(2, static_cast<int>(cells[cell_idx]->points.getNY()))),
+            static_cast<int>(pow(2, static_cast<int>(cells[cell_idx]->points.getNZ())))
         );
 
         Vec<float> quant_step;
@@ -120,6 +132,10 @@ private:
     }
 };
 
+/**
+ * Data transfer object to encode structural data of a PointCloudGrid.
+ * Held as a member inside PointCloudGridEncoder::EncoderSettings.
+*/
 struct GridPrecisionDescriptor {
     explicit GridPrecisionDescriptor(const Vec8& t_dimensions=Vec8(4,4,4),
                                      const BoundingBox& t_bounding_box=BoundingBox(),

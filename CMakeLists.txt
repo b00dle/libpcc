@@ -24,7 +24,6 @@ add_executable(libpcc
         examples/test_cmdp.cpp
         include/CMDParser.hpp
         include/Encoder.hpp
-        include/PointCloud.hpp
         src/CMDParser.cpp
         src/Encoder.cpp
         include/Measure.hpp

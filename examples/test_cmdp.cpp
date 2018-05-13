@@ -5,7 +5,7 @@
 #include "../include/PointCloudGridEncoder.hpp"
 #include "../include/BinaryFile.hpp"
 
-/*
+/**
  * Sample usage for libpcc.
  *  - extracts an uncompressed point cloud from a file in binary format.
  *  - sets up compression settings
@@ -14,6 +14,8 @@
  *  - decodes compressed message
  *  - prints statistics
  *  - shows sample usage for sending compressed data over tcp socket using zmq
+ *    - (uncomment block comments to try)
+ *  - show sample usage of measurement feature
  *    - (uncomment block comments to try)
 */
 int main(int argc, char* argv[]){
@@ -97,11 +99,15 @@ int main(int argc, char* argv[]){
     }
     std::cout << "==============================================\n";
 
+    /*
+    // compare compressed VS uncompressed point clouds
+    // this step will take a while
     Measure::ComparisonResult res = Measure::compare(
         pc_comp, pc,
         encoder.settings.grid_precision.bounding_box
     );
     Measure::print(res);
+    */
 
     return 0;
 }

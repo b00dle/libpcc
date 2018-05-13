@@ -1,11 +1,15 @@
-#ifndef RGBD_CALIB_CMDPARSER_HPP
-#define RGBD_CALIB_CMDPARSER_HPP
+#ifndef LIBPCC_CMDPARSER_HPP
+#define LIBPCC_CMDPARSER_HPP
 
 #include <string>
 #include <vector>
 #include <map>
 
-
+/**
+ * Convenience class to define command line argument interface
+ * of a cmd program.
+ * Can be used to set options and extract them from a command line call.
+*/
 class CMDParser{
  public:
   CMDParser(std::string arguments);
@@ -36,4 +40,4 @@ class CMDParser{
 
 
 
-#endif //#ifndef RGBD_CALIB_CMDPARSER_HPP
+#endif // LIBPCC_CMDPARSER_HPP
