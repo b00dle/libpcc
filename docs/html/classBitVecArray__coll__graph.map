@@ -1,0 +1,5 @@
+<map id="BitVecArray" name="BitVecArray">
+<area shape="rect" id="node3" href="$structVec.html" title="{Vec\&lt; uint64_t \&gt;\n|+ x\l+ y\l+ z\l|+ Vec()\l+ Vec()\l+ ~Vec()\l+ operator+()\l+ operator&#45;()\l+ operator+=()\l+ operator&#45;=()\l+ hash()\l+ operator\&lt;()\l+ getComponentSize()\l}" alt="" coords="5,447,159,685"/>
+<area shape="rect" id="node4" href="$structVec.html" title="{Vec\&lt; C \&gt;\n||+ Vec()\l+ Vec()\l+ ~Vec()\l+ operator+()\l+ operator&#45;()\l+ operator+=()\l+ operator&#45;=()\l+ hash()\l+ operator\&lt;()\l+ getComponentSize()\l}" alt="" coords="5,175,159,384"/>
+<area shape="rect" id="node6" title="STL class. " alt="" coords="183,527,299,605"/>
+</map>

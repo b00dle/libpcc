@@ -1,0 +1,19 @@
+<map id="PointCloudGridEncoder::decodeCell" name="PointCloudGridEncoder::decodeCell">
+<area shape="rect" id="node2" href="$classBitVecArray.html#ab8e41c19001eae9cf52b56e159174489" title="BitVecArray::getByteSize" alt="" coords="212,107,383,133"/>
+<area shape="rect" id="node4" href="$structGridCell.html#a677a71f79f3420c074528bec52cee9ff" title="GridCell::initColors" alt="" coords="231,56,363,83"/>
+<area shape="rect" id="node7" href="$structGridCell.html#a3304c268f5ff4541986547bc92718a38" title="GridCell::initPoints" alt="" coords="232,5,363,32"/>
+<area shape="rect" id="node8" href="$classBitVecArray.html#a8fa32c1b3af5f3d1f6d01f7e853b662e" title="BitVecArray::resize" alt="" coords="230,157,365,184"/>
+<area shape="rect" id="node9" href="$classBitVecArray.html#a95bdd202401f4e69fb26f2441cd2a18e" title="BitVecArray::unpack" alt="" coords="226,271,369,297"/>
+<area shape="rect" id="node3" href="$classBitVecArray.html#afa897f67c36b9102ee65b5ba9fd4567e" title="BitVecArray::getBitSize" alt="" coords="649,119,809,145"/>
+<area shape="rect" id="node5" href="$classBitVecArray.html#a857bf6ac42c17722b5f54d95282bdbb9" title="BitVecArray::init" alt="" coords="457,31,575,57"/>
+<area shape="rect" id="node6" href="$classBitVecArray.html#a9e8c397684295dc264896c603dd1e3f1" title="BitVecArray::clear" alt="" coords="665,31,793,57"/>
+<area shape="rect" id="node10" href="$classBitVecArray.html#ad47bfb66d63d49e1cffb661521459bca" title="BitVecArray::getByteSize" alt="" coords="431,144,601,171"/>
+<area shape="rect" id="node11" href="$classBitVec.html#ad6b7f1153047f52d41a9b541e8233ed9" title="BitVec::getXInt" alt="" coords="461,347,571,373"/>
+<area shape="rect" id="node13" href="$classBitVec.html#a5f267fc7f9f82a53b7025819a15f9485" title="BitVec::getYInt" alt="" coords="461,397,571,424"/>
+<area shape="rect" id="node14" href="$classBitVec.html#ad7648949c357dcb25e9ceb44d301e487" title="BitVec::getZInt" alt="" coords="461,448,571,475"/>
+<area shape="rect" id="node15" href="$classBitVec.html#acc23bd8e62827b3db756ea1dd1119808" title="BitVec::setX" alt="" coords="468,296,564,323"/>
+<area shape="rect" id="node17" href="$classBitVec.html#ab8c9c262500cd4e579a3e7f428e88aa3" title="BitVec::setY" alt="" coords="468,195,564,221"/>
+<area shape="rect" id="node18" href="$classBitVec.html#aeea766560c3b1c8dfbf2fa77acf113bd" title="BitVec::setZ" alt="" coords="469,245,563,272"/>
+<area shape="rect" id="node12" href="$structAbstractBitValue.html#af504982e9e8f84d8b0a050e621cf73d9" title="AbstractBitValue::get" alt="" coords="656,397,803,424"/>
+<area shape="rect" id="node16" href="$structAbstractBitValue.html#a9c633ada49e5a3e5b10a600f7621fa8b" title="AbstractBitValue::set" alt="" coords="656,245,803,272"/>
+</map>

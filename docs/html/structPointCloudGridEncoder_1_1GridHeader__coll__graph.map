@@ -1,0 +1,7 @@
+<map id="PointCloudGridEncoder::GridHeader" name="PointCloudGridEncoder::GridHeader">
+<area shape="rect" id="node2" href="$structVec8.html" title="{Vec8\n||+ Vec8()\l+ Vec8()\l+ Vec8()\l+ ~Vec8()\l+ operator==()\l+ operator!=()\l}" alt="" coords="52,777,157,928"/>
+<area shape="rect" id="node3" href="$structVec.html" title="{Vec\&lt; uint8_t \&gt;\n|+ x\l+ y\l+ z\l|+ Vec()\l+ Vec()\l+ ~Vec()\l+ operator+()\l+ operator&#45;()\l+ operator+=()\l+ operator&#45;=()\l+ hash()\l+ operator\&lt;()\l+ getComponentSize()\l}" alt="" coords="5,447,159,685"/>
+<area shape="rect" id="node4" href="$structVec.html" title="{Vec\&lt; C \&gt;\n||+ Vec()\l+ Vec()\l+ ~Vec()\l+ operator+()\l+ operator&#45;()\l+ operator+=()\l+ operator&#45;=()\l+ hash()\l+ operator\&lt;()\l+ getComponentSize()\l}" alt="" coords="75,175,228,384"/>
+<area shape="rect" id="node7" href="$structVec.html" title="{Vec\&lt; float \&gt;\n|+ x\l+ y\l+ z\l|+ Vec()\l+ Vec()\l+ ~Vec()\l+ operator+()\l+ operator&#45;()\l+ operator+=()\l+ operator&#45;=()\l+ hash()\l+ operator\&lt;()\l+ getComponentSize()\l}" alt="" coords="183,447,336,685"/>
+<area shape="rect" id="node6" href="$structBoundingBox.html" title="{BoundingBox\n||+ BoundingBox()\l+ BoundingBox()\l+ BoundingBox()\l+ ~BoundingBox()\l+ contains()\l+ contains()\l+ contains()\l+ calcRange()\l}" alt="" coords="184,763,311,943"/>
+</map>

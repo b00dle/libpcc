@@ -1,0 +1,5 @@
+<map id="Encoder::rgbToCieLab" name="Encoder::rgbToCieLab">
+<area shape="rect" id="node2" href="$classMeasure.html#a89292a9ad1cb884c9b296c54ac9ae95a" title="Measure::colorErrorCielab" alt="" coords="205,31,379,57"/>
+<area shape="rect" id="node3" href="$classMeasure.html#af94f6553661c3f2988b2efe1f77f1a46" title="Measure::compare" alt="" coords="448,5,579,32"/>
+<area shape="rect" id="node4" href="$classMeasure.html#a5544f037a7c5562e162ce049ca37fa2d" title="Measure::colorErrorCielab" alt="" coords="427,56,600,83"/>
+</map>

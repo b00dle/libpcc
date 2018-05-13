@@ -1,0 +1,4 @@
+<map id="Measure::colorErrorCielab" name="Measure::colorErrorCielab">
+<area shape="rect" id="node2" href="$classEncoder.html#a054a070456000fc4f9dc7ac15c79caa0" title="Encoder::rgbToCieLab" alt="" coords="227,5,379,32"/>
+<area shape="rect" id="node3" href="$classEncoder.html#a0174f53c5c08461e946c5cf742f255eb" title="Encoder::rgbToXyz" alt="" coords="427,5,561,32"/>
+</map>

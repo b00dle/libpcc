@@ -1,0 +1,6 @@
+<map id="Encoder::bit8ToRgb" name="Encoder::bit8ToRgb">
+<area shape="rect" id="node2" href="$classMeasure.html#a5544f037a7c5562e162ce049ca37fa2d" title="Measure::colorErrorCielab" alt="" coords="212,5,385,32"/>
+<area shape="rect" id="node3" href="$classMeasure.html#a93a6d66de88f35b68af9afd2b5473af0" title="Measure::colorErrorXyz" alt="" coords="219,56,378,83"/>
+<area shape="rect" id="node4" href="$classMeasure.html#a5f08bf1e14bafe2a980c27f050f2fb3e" title="Measure::colorErrorYuv" alt="" coords="219,107,378,133"/>
+<area shape="rect" id="node5" href="$classMeasure.html#a67cd3d8b607a6092eb58343415a359ab" title="Measure::colorErrorYuvWithoutY" alt="" coords="192,157,405,184"/>
+</map>
