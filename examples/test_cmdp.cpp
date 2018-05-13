@@ -97,5 +97,11 @@ int main(int argc, char* argv[]){
     }
     std::cout << "==============================================\n";
 
+    Measure::ComparisonResult res = Measure::compare(
+        pc_comp, pc,
+        encoder.settings.grid_precision.bounding_box
+    );
+    Measure::print(res);
+
     return 0;
 }

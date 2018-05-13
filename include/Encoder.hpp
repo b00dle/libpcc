@@ -30,6 +30,8 @@ public:
     static Vec<float> const rgbToXyz(Vec<float> rgb);
     // Color Conversion to CIE LAB standard
     static Vec<float> const rgbToCieLab(Vec<float> const& rgb);
+    // 8 bit representation to [0,1] representation
+    static Vec<float> const bit8ToRgb(const unsigned char from[4]);
 
     static const Vec<uint64_t> mapVec(const Vec<float>& from, BoundingBox const& bb, const Vec<uint8_t>& bits);
     static const Vec<uint64_t> mapVec(const unsigned char from[4], BoundingBox const& bb, const Vec<uint8_t>& bits);

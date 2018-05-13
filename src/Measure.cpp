@@ -1,127 +1,115 @@
 #include "../include/Measure.hpp"
-#include "../include/Encoder.hpp"
 
 Measure::Measure()
-  : m_start_time()
+  : start_time_()
 {}
 
 Measure::~Measure()
 {}
 
-// Sets current TimeStamp and returns it as Time Point.
-time_point<system_clock> Measure::createTimeStamp()
+Measure::TimePoint Measure::now()
 {
-    return time_point_cast<milliseconds>(system_clock::now());
+    return std::chrono::time_point_cast<Milliseconds>(Clock::now());
 }
 
-std::time_t Measure::calcTimeSpan(time_point<system_clock> start_point, time_point<system_clock> end_point)
+std::time_t Measure::span(TimePoint start_point, TimePoint end_point)
 {
-    return duration_cast<milliseconds>(end_point - start_point).count();
+    return std::chrono::duration_cast<Milliseconds>(end_point - start_point).count();
 }
 
-// Prints TimeSpan.
-void Measure::printTimeSpan(std::time_t period_time)
+void Measure::print(std::time_t period_time)
 {
     std::cout << "TimePeriod Value (in seconds): " << period_time / 1000 << std::endl;
     std::cout << "TimePeriod Value (in milliseconds): " << period_time  << std::endl;
 }
 
-// Start and stopWatch Functions.
+void Measure::print(const Measure::ComparisonResult & data)
+{
+    std::cout << "PC Differences " << std::endl;
+    std::cout << "  > average position error " << data.avg_pos_error << std::endl;
+    std::cout << "  > average color error " << data.avg_clr_error << std::endl;
+    std::cout << "  > position variance " << data.pos_variance << std::endl;
+    std::cout << "  > color variance " << data.clr_variance << std::endl;
+    std::cout << "  > max position error " << data.max_pos_error << std::endl;
+    std::cout << "  > max color error " << data.max_clr_error << std::endl;
+}
+
 void Measure::startWatch()
 {
-    m_start_time = time_point_cast<milliseconds>(system_clock::now());
+    start_time_ = std::chrono::time_point_cast<Milliseconds>(Clock::now());
 }
 
 std::time_t Measure::stopWatch()
 {
-    time_point<system_clock> time_point = time_point_cast<milliseconds>(system_clock::now());;
-    return duration_cast<milliseconds>(time_point - m_start_time).count();
+    TimePoint time_point = std::chrono::time_point_cast<Milliseconds>(Clock::now());;
+    return std::chrono::duration_cast<Milliseconds>(time_point - start_time_).count();
 }
 
-//Calculate Mean Squared Error between two PointClouds
-std::vector<float> Measure::comparePC(PointCloud<Vec<float>, Vec<float>> const& p1, PointCloud<Vec<float>, Vec<float>> const& p2, BoundingBox const& bb)
+const Measure::ComparisonResult Measure::compare(std::vector<UncompressedVoxel> const &p1,
+                                                 std::vector<UncompressedVoxel> const &p2, BoundingBox const &bb)
 {
-    std::vector<Vec<float>> p1_data_points = p1.points;
-    std::vector<Vec<float>> p2_data_points = p2.points;
-    std::vector<Vec<float>> p1_data_points_color = p1.colors;
-    std::vector<Vec<float>> p2_data_points_color = p2.colors;
+    std::vector<float> min_distances(p1.size());
+    std::vector<float> color_errors(p1.size());
 
-    std::list<float> min_distance_list;
-    std::list<float> color_error_list;
-    std::vector<float> data;
-    float avg_error = 0;
-    float variance = 0;
-    float max_error = 0;
-    float color_error = 0;
-    float avg_color_error = 0;
-    float color_variance = 0;
-    float max_color_error = 0;
-
-    for(unsigned p1_index = 0; p1_index < p1_data_points.size(); ++p1_index) {
-        if(!bb.contains(p1_data_points[p1_index]))
+#pragma omp parallel for
+    for(int p1_idx = 0; p1_idx < p1.size(); ++p1_idx) {
+        if(!bb.contains(p1[p1_idx].pos))
             continue;
-        float nearest_pair = 100000;
-        for(unsigned p2_index = 0; p2_index < p2_data_points.size(); ++p2_index) {
-            if(!bb.contains(p2_data_points[p2_index]))
+        float closest_distance = 100000;
+        float clr_error = 0;
+        for(auto p2_voxel : p2) {
+            if(!bb.contains(p2_voxel.pos))
                 continue;
-            float x_pair = (p1_data_points[p1_index].x - p2_data_points[p2_index].x) *
-              (p1_data_points[p1_index].x - p2_data_points[p2_index].x);
-            float y_pair = (p1_data_points[p1_index].y - p2_data_points[p2_index].y) *
-              (p1_data_points[p1_index].y - p2_data_points[p2_index].y);
-            float z_pair = (p1_data_points[p1_index].z - p2_data_points[p2_index].z) *
-              (p1_data_points[p1_index].z - p2_data_points[p2_index].z);
-            auto distance_pair = static_cast<float>(sqrt(x_pair + y_pair + z_pair));
-
-            if(distance_pair < nearest_pair) {
-                nearest_pair = distance_pair;
-                color_error = colorErrorCielab(p1_data_points_color[p1_index], p2_data_points_color[p2_index]);
+            float x_dist = (p1[p1_idx].pos[0] - p2_voxel.pos[0]) *
+                           (p1[p1_idx].pos[0] - p2_voxel.pos[0]);
+            float y_dist = (p1[p1_idx].pos[1] - p2_voxel.pos[1]) *
+                           (p1[p1_idx].pos[1] - p2_voxel.pos[1]);
+            float z_dist = (p1[p1_idx].pos[2] - p2_voxel.pos[2]) *
+                           (p1[p1_idx].pos[2] - p2_voxel.pos[2]);
+            auto distance = static_cast<float>(sqrt(x_dist + y_dist + z_dist));
+            if(distance < closest_distance) {
+                closest_distance = distance;
+                clr_error = colorErrorCielab(p1[p1_idx], p2_voxel);
             }
         }
-        min_distance_list.push_back(nearest_pair);
-        color_error_list.push_back(color_error);
+        min_distances[p1_idx] = closest_distance;
+        color_errors[p1_idx] = clr_error;
     }
 
-    for(auto const& l : min_distance_list) {
-        avg_error += l;
-        if(max_error < l)
-            max_error = l;
+    float max_pos_error = 0;
+    float avg_pos_error = 0;
+    for(auto const& l : min_distances) {
+        avg_pos_error += l;
+        if(max_pos_error < l)
+            max_pos_error = l;
     }
+    avg_pos_error = avg_pos_error / min_distances.size();
 
-    for(auto const& k : color_error_list) {
-        avg_color_error += k;
-        if(max_color_error < k)
-            max_color_error = k;
+    float max_clr_error = 0;
+    float avg_clr_error = 0;
+    for(auto const& k : color_errors) {
+        avg_clr_error += k;
+        if(max_clr_error < k) {
+            max_clr_error = k;
+        }
     }
+    avg_clr_error = avg_clr_error / color_errors.size();
 
-    avg_error = avg_error / min_distance_list.size();
-    avg_color_error = avg_color_error / color_error_list.size();
-    variance = calcVariance(min_distance_list);
-    color_variance = calcVariance(color_error_list);
+    float pos_variance = calcVariance(min_distances);
+    float clr_variance = calcVariance(color_errors);
 
-
-    data.push_back(avg_error);
-    data.push_back(variance);
-    data.push_back(max_error);
-    data.push_back(avg_color_error);
-    data.push_back(color_variance);
-    data.push_back(max_color_error);
+    ComparisonResult data;
+    data.avg_pos_error = avg_pos_error;
+    data.pos_variance = pos_variance;
+    data.max_pos_error = max_pos_error;
+    data.avg_clr_error = avg_clr_error;
+    data.clr_variance = clr_variance;
+    data.max_clr_error = max_clr_error;
 
     return data;
 }
 
-void Measure::printResultsPC(std::vector<float> results)
-{
-    std::cout << "PC Differences " << std::endl;
-    std::cout << "  > avg error " << results[0] << std::endl;
-    std::cout << "  > variance " << results[1] << std::endl;
-    std::cout << "  > max error " << results[2] << std::endl;
-    std::cout << "  > avg color error " << results[3] << std::endl;
-    std::cout << "  > color variance " << results[4] << std::endl;
-    std::cout << "  > max color error " << results[5] << std::endl;
-}
-
-// Calculate YUV Color values for point1 and point2
-float Measure::colorErrorYuv(Vec<float> point1, Vec<float> point2)
+float Measure::colorErrorYuv(const Vec<float>& point1, const Vec<float>& point2)
 {
     Vec<float> point1_yuv = Encoder::rgbToYuv(point1);
     Vec<float> point2_yuv = Encoder::rgbToYuv(point2);
@@ -135,8 +123,14 @@ float Measure::colorErrorYuv(Vec<float> point1, Vec<float> point2)
     return color_deviation;
 }
 
-// Calculate YUV Color values for point1 and point2
-float Measure::colorErrorYuvWithoutY(Vec<float> point1, Vec<float> point2)
+float Measure::colorErrorYuv(const UncompressedVoxel &v1, const UncompressedVoxel &v2) {
+    return colorErrorYuv(
+        Encoder::bit8ToRgb(v1.color_rgba),
+        Encoder::bit8ToRgb(v2.color_rgba)
+    );
+}
+
+float Measure::colorErrorYuvWithoutY(const Vec<float>& point1, const Vec<float>& point2)
 {
     Vec<float> point1_yuv = Encoder::rgbToYuv(point1);
     Vec<float> point2_yuv = Encoder::rgbToYuv(point2);
@@ -149,8 +143,14 @@ float Measure::colorErrorYuvWithoutY(Vec<float> point1, Vec<float> point2)
     return color_deviation;
 }
 
-//Calculate YUV Color values for point1 and point2
-float Measure::colorErrorXyz(Vec<float> point1, Vec<float> point2) {
+float Measure::colorErrorYuvWithoutY(const UncompressedVoxel &v1, const UncompressedVoxel &v2) {
+    return colorErrorYuvWithoutY(
+        Encoder::bit8ToRgb(v1.color_rgba),
+        Encoder::bit8ToRgb(v2.color_rgba)
+    );
+}
+
+float Measure::colorErrorXyz(const Vec<float>& point1, const Vec<float>& point2) {
     Vec<float> point1_lab = Encoder::rgbToXyz(point1);
     Vec<float> point2_lab = Encoder::rgbToXyz(point2);
 
@@ -163,7 +163,14 @@ float Measure::colorErrorXyz(Vec<float> point1, Vec<float> point2) {
     return color_deviation;
 }
 
-float Measure::colorErrorCielab(Vec<float> point1, Vec<float> point2) {
+float Measure::colorErrorXyz(const UncompressedVoxel &v1, const UncompressedVoxel &v2) {
+    return colorErrorXyz(
+        Encoder::bit8ToRgb(v1.color_rgba),
+        Encoder::bit8ToRgb(v2.color_rgba)
+    );
+}
+
+float Measure::colorErrorCielab(const Vec<float>& point1, const Vec<float>& point2) {
     //Calculate YUV Color values for point1 and point2
     Vec<float> point1_lab = Encoder::rgbToCieLab(point1);
     Vec<float> point2_lab = Encoder::rgbToCieLab(point2);
@@ -177,7 +184,14 @@ float Measure::colorErrorCielab(Vec<float> point1, Vec<float> point2) {
     return color_deviation;
 }
 
-float Measure::calcVariance(std::list<float> values)
+float Measure::colorErrorCielab(const UncompressedVoxel &v1, const UncompressedVoxel &v2) {
+    return colorErrorCielab(
+        Encoder::bit8ToRgb(v1.color_rgba),
+        Encoder::bit8ToRgb(v2.color_rgba)
+    );
+}
+
+float Measure::calcVariance(const std::vector<float>& values)
 {
     float avg_error = 0;
     float variance = 0;

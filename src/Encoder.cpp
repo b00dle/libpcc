@@ -94,6 +94,15 @@ Vec<float> const Encoder::rgbToCieLab(Vec<float> const& rgb) {
   return lab;
 }
 
+Vec<float> const Encoder::bit8ToRgb(const unsigned char from[4])
+{
+    return Vec<float>(
+        from[0] / 255.0f,
+        from[1] / 255.0f,
+        from[2] / 255.0f
+    );
+}
+
 const Vec<uint64_t> Encoder::mapVec(const Vec<float>& from, BoundingBox const& bb, const Vec<uint8_t>& bits)
 {
     Vec<uint64_t> res;
