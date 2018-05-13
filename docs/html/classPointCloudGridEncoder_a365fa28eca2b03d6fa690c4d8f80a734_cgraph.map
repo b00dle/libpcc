@@ -1,0 +1,26 @@
+<map id="PointCloudGridEncoder::encodePointCloudGrid" name="PointCloudGridEncoder::encodePointCloudGrid">
+<area shape="rect" id="node2" href="$classPointCloudGridEncoder.html#a9e04da4e2c5e07fc7f95a7ad33dd3dde" title="PointCloudGridEncoder\l::calcMessageSize" alt="" coords="213,123,372,164"/>
+<area shape="rect" id="node5" href="$structPointCloudGridEncoder_1_1CellHeader.html#a46a5ce061f21a3a3f6ad8dad12d045b1" title="PointCloudGridEncoder\l::CellHeader::getByteSize" alt="" coords="427,188,601,229"/>
+<area shape="rect" id="node6" href="$classBitVecArray.html#ad47bfb66d63d49e1cffb661521459bca" title="BitVecArray::getByteSize" alt="" coords="656,150,827,177"/>
+<area shape="rect" id="node8" href="$classPointCloudGridEncoder.html#a150cdda09aed761af62bfb7efca03170" title="PointCloudGridEncoder\l::encodeBlackList" alt="" coords="213,305,372,347"/>
+<area shape="rect" id="node9" href="$classPointCloudGridEncoder.html#a5a54b538776b283c368f981ce419e6ec" title="PointCloudGridEncoder\l::encodeCell" alt="" coords="213,371,372,412"/>
+<area shape="rect" id="node22" href="$classPointCloudGridEncoder.html#ac70c7c403940842ebffba1f1b62ee628" title="PointCloudGridEncoder\l::encodeCellHeader" alt="" coords="213,436,372,477"/>
+<area shape="rect" id="node23" href="$classPointCloudGridEncoder.html#a13a4b842e777993d24b6f9967a7e5f01" title="PointCloudGridEncoder\l::encodeGridHeader" alt="" coords="213,501,372,543"/>
+<area shape="rect" id="node24" href="$classMeasure.html#a51788fa339354024eb767f31083ba794" title="Measure::startWatch" alt="" coords="221,567,365,594"/>
+<area shape="rect" id="node25" href="$classMeasure.html#a68be6e4e5ab070344e30d53be184dc60" title="Measure::stopWatch" alt="" coords="221,618,364,645"/>
+<area shape="rect" id="node3" href="$structPointCloudGridEncoder_1_1GlobalHeader.html#acf109d220f0c39957f59596cfd27dd72" title="PointCloudGridEncoder\l::GlobalHeader::getByteSize" alt="" coords="420,5,608,47"/>
+<area shape="rect" id="node4" href="$structPointCloudGridEncoder_1_1GridHeader.html#a93003ea4f9a809c35d5953cb961f4552" title="PointCloudGridEncoder\l::GridHeader::getByteSize" alt="" coords="427,123,601,164"/>
+<area shape="rect" id="node7" href="$classBitVecArray.html#afa897f67c36b9102ee65b5ba9fd4567e" title="BitVecArray::getBitSize" alt="" coords="875,175,1035,202"/>
+<area shape="rect" id="node10" href="$structGridCell.html#a6627a3098222c2ef63c6b2776cd170d8" title="GridCell::size" alt="" coords="463,530,565,557"/>
+<area shape="rect" id="node12" href="$classBitVecArray.html#a672b263beb94e337a80af2e0c8ad76b2" title="BitVecArray::pack" alt="" coords="450,378,578,405"/>
+<area shape="rect" id="node21" href="$classBitVecArray.html#ab8e41c19001eae9cf52b56e159174489" title="BitVecArray::getByteSize" alt="" coords="429,317,599,343"/>
+<area shape="rect" id="node11" href="$classBitVecArray.html#a1802b1729b88ac9f0505019d70874401" title="BitVecArray::size" alt="" coords="679,606,803,633"/>
+<area shape="rect" id="node13" href="$structAbstractBitValue.html#a7d066977dd2c98d3b19b978a6cccf92c" title="AbstractBitValue::getBit" alt="" coords="660,454,823,481"/>
+<area shape="rect" id="node14" href="$classBitVec.html#a8c35b2b216e8e8c7207c41e293f5c8fe" title="BitVec::getX" alt="" coords="693,251,789,278"/>
+<area shape="rect" id="node15" href="$classBitVec.html#aac2a91685e0758ceb9ae9e7294bc29af" title="BitVec::getY" alt="" coords="693,302,789,329"/>
+<area shape="rect" id="node16" href="$classBitVec.html#af0c2c6afef30926c776b4dabd770a3d4" title="BitVec::getZ" alt="" coords="694,353,789,379"/>
+<area shape="rect" id="node17" href="$classBitVec.html#acc23bd8e62827b3db756ea1dd1119808" title="BitVec::setX" alt="" coords="693,505,789,531"/>
+<area shape="rect" id="node19" href="$classBitVec.html#ab8c9c262500cd4e579a3e7f428e88aa3" title="BitVec::setY" alt="" coords="693,555,789,582"/>
+<area shape="rect" id="node20" href="$classBitVec.html#aeea766560c3b1c8dfbf2fa77acf113bd" title="BitVec::setZ" alt="" coords="694,403,789,430"/>
+<area shape="rect" id="node18" href="$structAbstractBitValue.html#a9c633ada49e5a3e5b10a600f7621fa8b" title="AbstractBitValue::set" alt="" coords="881,505,1028,531"/>
+</map>

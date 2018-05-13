@@ -1,0 +1,5 @@
+<map id="PointCloudGrid::getQuantizationStepSize" name="PointCloudGrid::getQuantizationStepSize">
+<area shape="rect" id="node2" href="$classBitVecArray.html#afe9e4a93fdc320c6e45c69f11c94704a" title="BitVecArray::getNX" alt="" coords="263,5,400,32"/>
+<area shape="rect" id="node3" href="$classBitVecArray.html#a4b61b721bc65f55ada12d1ed8e927702" title="BitVecArray::getNY" alt="" coords="263,56,400,83"/>
+<area shape="rect" id="node4" href="$classBitVecArray.html#a48ee044da10b1907506fcc0ed8fd0f55" title="BitVecArray::getNZ" alt="" coords="263,107,399,133"/>
+</map>

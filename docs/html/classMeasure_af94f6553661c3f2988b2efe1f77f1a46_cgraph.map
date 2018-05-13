@@ -1,0 +1,7 @@
+<map id="Measure::compare" name="Measure::compare">
+<area shape="rect" id="node2" href="$classMeasure.html#a18ce7df3e0bdd65be375e8485abf7685" title="Measure::calcVariance" alt="" coords="193,5,348,32"/>
+<area shape="rect" id="node3" href="$classMeasure.html#a89292a9ad1cb884c9b296c54ac9ae95a" title="Measure::colorErrorCielab" alt="" coords="184,56,357,83"/>
+<area shape="rect" id="node6" href="$structBoundingBox.html#ad9820609905d23da801ce8ef6d8fe914" title="BoundingBox::contains" alt="" coords="193,107,349,133"/>
+<area shape="rect" id="node4" href="$classEncoder.html#a054a070456000fc4f9dc7ac15c79caa0" title="Encoder::rgbToCieLab" alt="" coords="405,56,557,83"/>
+<area shape="rect" id="node5" href="$classEncoder.html#a0174f53c5c08461e946c5cf742f255eb" title="Encoder::rgbToXyz" alt="" coords="605,56,740,83"/>
+</map>

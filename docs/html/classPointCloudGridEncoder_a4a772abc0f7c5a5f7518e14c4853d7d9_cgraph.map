@@ -1,0 +1,6 @@
+<map id="PointCloudGridEncoder::finalizeMessage" name="PointCloudGridEncoder::finalizeMessage">
+<area shape="rect" id="node2" href="$classPointCloudGridEncoder.html#a5453431efcdc55d9f9656ecb040cba5d" title="PointCloudGridEncoder\l::encodeGlobalHeader" alt="" coords="227,5,385,47"/>
+<area shape="rect" id="node3" href="$structPointCloudGridEncoder_1_1GlobalHeader.html#acf109d220f0c39957f59596cfd27dd72" title="PointCloudGridEncoder\l::GlobalHeader::getByteSize" alt="" coords="212,71,400,112"/>
+<area shape="rect" id="node4" href="$classPointCloudGridEncoder.html#a6836388dcd20aad86e8c4827c19e99ac" title="PointCloudGridEncoder\l::writeToAppendix" alt="" coords="227,136,385,177"/>
+<area shape="rect" id="node5" href="$classPointCloudGridEncoder.html#aa4014a9cf4b977cdf77a7736fe465fa4" title="PointCloudGridEncoder\l::decodeGlobalHeader" alt="" coords="448,136,607,177"/>
+</map>

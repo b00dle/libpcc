@@ -1,0 +1,5 @@
+<map id="Measure::colorErrorYuv" name="Measure::colorErrorYuv">
+<area shape="rect" id="node2" href="$classEncoder.html#a788838fc71e2b31319adc6871f8ec4a7" title="Encoder::bit8ToRgb" alt="" coords="222,5,361,32"/>
+<area shape="rect" id="node3" href="$classMeasure.html#a5fd21b9ccc76d1c1da43d9bec111734d" title="Measure::colorErrorYuv" alt="" coords="212,56,371,83"/>
+<area shape="rect" id="node4" href="$classEncoder.html#a1ccf883c9dd449396f5693cc6a0dfeb8" title="Encoder::rgbToYuv" alt="" coords="419,56,553,83"/>
+</map>

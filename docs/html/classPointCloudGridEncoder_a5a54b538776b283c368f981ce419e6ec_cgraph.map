@@ -1,0 +1,16 @@
+<map id="PointCloudGridEncoder::encodeCell" name="PointCloudGridEncoder::encodeCell">
+<area shape="rect" id="node2" href="$classBitVecArray.html#ab8e41c19001eae9cf52b56e159174489" title="BitVecArray::getByteSize" alt="" coords="212,50,383,76"/>
+<area shape="rect" id="node4" href="$classBitVecArray.html#a672b263beb94e337a80af2e0c8ad76b2" title="BitVecArray::pack" alt="" coords="233,202,361,228"/>
+<area shape="rect" id="node14" href="$structGridCell.html#a6627a3098222c2ef63c6b2776cd170d8" title="GridCell::size" alt="" coords="247,328,348,355"/>
+<area shape="rect" id="node3" href="$classBitVecArray.html#afa897f67c36b9102ee65b5ba9fd4567e" title="BitVecArray::getBitSize" alt="" coords="649,24,809,51"/>
+<area shape="rect" id="node5" href="$structAbstractBitValue.html#a7d066977dd2c98d3b19b978a6cccf92c" title="AbstractBitValue::getBit" alt="" coords="435,24,597,51"/>
+<area shape="rect" id="node6" href="$classBitVecArray.html#ad47bfb66d63d49e1cffb661521459bca" title="BitVecArray::getByteSize" alt="" coords="431,75,601,102"/>
+<area shape="rect" id="node7" href="$classBitVec.html#a8c35b2b216e8e8c7207c41e293f5c8fe" title="BitVec::getX" alt="" coords="468,126,564,152"/>
+<area shape="rect" id="node8" href="$classBitVec.html#aac2a91685e0758ceb9ae9e7294bc29af" title="BitVec::getY" alt="" coords="468,176,564,203"/>
+<area shape="rect" id="node9" href="$classBitVec.html#af0c2c6afef30926c776b4dabd770a3d4" title="BitVec::getZ" alt="" coords="469,227,563,254"/>
+<area shape="rect" id="node10" href="$classBitVec.html#acc23bd8e62827b3db756ea1dd1119808" title="BitVec::setX" alt="" coords="468,278,564,304"/>
+<area shape="rect" id="node12" href="$classBitVec.html#ab8c9c262500cd4e579a3e7f428e88aa3" title="BitVec::setY" alt="" coords="468,328,564,355"/>
+<area shape="rect" id="node13" href="$classBitVec.html#aeea766560c3b1c8dfbf2fa77acf113bd" title="BitVec::setZ" alt="" coords="469,379,563,406"/>
+<area shape="rect" id="node11" href="$structAbstractBitValue.html#a9c633ada49e5a3e5b10a600f7621fa8b" title="AbstractBitValue::set" alt="" coords="656,328,803,355"/>
+<area shape="rect" id="node15" href="$classBitVecArray.html#a1802b1729b88ac9f0505019d70874401" title="BitVecArray::size" alt="" coords="454,430,578,456"/>
+</map>

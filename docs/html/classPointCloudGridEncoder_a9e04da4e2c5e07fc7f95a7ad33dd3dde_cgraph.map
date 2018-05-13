@@ -1,0 +1,7 @@
+<map id="PointCloudGridEncoder::calcMessageSize" name="PointCloudGridEncoder::calcMessageSize">
+<area shape="rect" id="node2" href="$classBitVecArray.html#ad47bfb66d63d49e1cffb661521459bca" title="BitVecArray::getByteSize" alt="" coords="221,5,391,32"/>
+<area shape="rect" id="node4" href="$structPointCloudGridEncoder_1_1GlobalHeader.html#acf109d220f0c39957f59596cfd27dd72" title="PointCloudGridEncoder\l::GlobalHeader::getByteSize" alt="" coords="212,57,400,98"/>
+<area shape="rect" id="node5" href="$structPointCloudGridEncoder_1_1GridHeader.html#a93003ea4f9a809c35d5953cb961f4552" title="PointCloudGridEncoder\l::GridHeader::getByteSize" alt="" coords="219,122,393,163"/>
+<area shape="rect" id="node6" href="$structPointCloudGridEncoder_1_1CellHeader.html#a46a5ce061f21a3a3f6ad8dad12d045b1" title="PointCloudGridEncoder\l::CellHeader::getByteSize" alt="" coords="219,187,393,229"/>
+<area shape="rect" id="node3" href="$classBitVecArray.html#afa897f67c36b9102ee65b5ba9fd4567e" title="BitVecArray::getBitSize" alt="" coords="448,5,608,32"/>
+</map>

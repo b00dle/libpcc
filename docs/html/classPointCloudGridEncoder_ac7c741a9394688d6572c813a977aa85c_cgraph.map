@@ -1,0 +1,12 @@
+<map id="PointCloudGridEncoder::extractPointCloudFromGrid" name="PointCloudGridEncoder::extractPointCloudFromGrid">
+<area shape="rect" id="node2" href="$structBoundingBox.html#a257dbe1081ed9de444f268da8b7b919a" title="BoundingBox::calcRange" alt="" coords="242,5,411,32"/>
+<area shape="rect" id="node3" href="$classBitVecArray.html#afe9e4a93fdc320c6e45c69f11c94704a" title="BitVecArray::getNX" alt="" coords="258,56,395,83"/>
+<area shape="rect" id="node4" href="$classBitVecArray.html#a4b61b721bc65f55ada12d1ed8e927702" title="BitVecArray::getNY" alt="" coords="258,107,395,133"/>
+<area shape="rect" id="node5" href="$classBitVecArray.html#a48ee044da10b1907506fcc0ed8fd0f55" title="BitVecArray::getNZ" alt="" coords="259,157,395,184"/>
+<area shape="rect" id="node6" href="$classEncoder.html#a1d7435e844ad50149821da4f27521f2d" title="Encoder::mapVecToFloat" alt="" coords="241,208,412,235"/>
+<area shape="rect" id="node8" href="$structGridCell.html#a6627a3098222c2ef63c6b2776cd170d8" title="GridCell::size" alt="" coords="276,259,377,285"/>
+<area shape="rect" id="node10" href="$classMeasure.html#a51788fa339354024eb767f31083ba794" title="Measure::startWatch" alt="" coords="255,309,399,336"/>
+<area shape="rect" id="node11" href="$classMeasure.html#a68be6e4e5ab070344e30d53be184dc60" title="Measure::stopWatch" alt="" coords="255,360,398,387"/>
+<area shape="rect" id="node7" href="$classEncoder.html#adbed7d9981f424cb7b37a4a18f38595f" title="Encoder::mapFromBit" alt="" coords="460,208,609,235"/>
+<area shape="rect" id="node9" href="$classBitVecArray.html#a1802b1729b88ac9f0505019d70874401" title="BitVecArray::size" alt="" coords="473,259,597,285"/>
+</map>

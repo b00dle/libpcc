@@ -1,0 +1,5 @@
+<map id="Measure::colorErrorXyz" name="Measure::colorErrorXyz">
+<area shape="rect" id="node2" href="$classEncoder.html#a788838fc71e2b31319adc6871f8ec4a7" title="Encoder::bit8ToRgb" alt="" coords="222,5,361,32"/>
+<area shape="rect" id="node3" href="$classMeasure.html#aa18ed586fb99cf9f09b690521e7d9ae6" title="Measure::colorErrorXyz" alt="" coords="212,56,371,83"/>
+<area shape="rect" id="node4" href="$classEncoder.html#a0174f53c5c08461e946c5cf742f255eb" title="Encoder::rgbToXyz" alt="" coords="419,56,553,83"/>
+</map>

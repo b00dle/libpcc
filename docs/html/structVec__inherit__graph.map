@@ -1,0 +1,7 @@
+<map id="Vec&lt; C &gt;" name="Vec&lt; C &gt;">
+<area shape="rect" id="node2" href="$structVec.html" title="{Vec\&lt; float \&gt;\n|+ x\l+ y\l+ z\l|+ Vec()\l+ Vec()\l+ ~Vec()\l+ operator+()\l+ operator&#45;()\l+ operator+=()\l+ operator&#45;=()\l+ hash()\l+ operator\&lt;()\l+ getComponentSize()\l}" alt="" coords="5,307,159,545"/>
+<area shape="rect" id="node3" href="$structVec.html" title="{Vec\&lt; uint8_t \&gt;\n|+ x\l+ y\l+ z\l|+ Vec()\l+ Vec()\l+ ~Vec()\l+ operator+()\l+ operator&#45;()\l+ operator+=()\l+ operator&#45;=()\l+ hash()\l+ operator\&lt;()\l+ getComponentSize()\l}" alt="" coords="183,307,336,545"/>
+<area shape="rect" id="node5" href="$structVec.html" title="{Vec\&lt; uint64_t \&gt;\n|+ x\l+ y\l+ z\l|+ Vec()\l+ Vec()\l+ ~Vec()\l+ operator+()\l+ operator&#45;()\l+ operator+=()\l+ operator&#45;=()\l+ hash()\l+ operator\&lt;()\l+ getComponentSize()\l}" alt="" coords="360,307,513,545"/>
+<area shape="rect" id="node6" href="$structVec.html" title="{Vec\&lt; BitCount \&gt;\n|+ x\l+ y\l+ z\l|+ Vec()\l+ Vec()\l+ ~Vec()\l+ operator+()\l+ operator&#45;()\l+ operator+=()\l+ operator&#45;=()\l+ hash()\l+ operator\&lt;()\l+ getComponentSize()\l}" alt="" coords="537,307,691,545"/>
+<area shape="rect" id="node4" href="$structVec8.html" title="{Vec8\n||+ Vec8()\l+ Vec8()\l+ Vec8()\l+ ~Vec8()\l+ operator==()\l+ operator!=()\l}" alt="" coords="207,595,312,745"/>
+</map>

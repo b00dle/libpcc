@@ -1,0 +1,8 @@
+<map id="PointCloudGridEncoder::entropyCompression" name="PointCloudGridEncoder::entropyCompression">
+<area shape="rect" id="node2" href="$classPointCloudGridEncoder.html#a5453431efcdc55d9f9656ecb040cba5d" title="PointCloudGridEncoder\l::encodeGlobalHeader" alt="" coords="227,5,385,47"/>
+<area shape="rect" id="node3" href="$structPointCloudGridEncoder_1_1GlobalHeader.html#acf109d220f0c39957f59596cfd27dd72" title="PointCloudGridEncoder\l::GlobalHeader::getByteSize" alt="" coords="212,71,400,112"/>
+<area shape="rect" id="node4" href="$classMeasure.html#a51788fa339354024eb767f31083ba794" title="Measure::startWatch" alt="" coords="234,137,378,163"/>
+<area shape="rect" id="node5" href="$classMeasure.html#a68be6e4e5ab070344e30d53be184dc60" title="Measure::stopWatch" alt="" coords="235,187,377,214"/>
+<area shape="rect" id="node6" href="$classPointCloudGridEncoder.html#a6836388dcd20aad86e8c4827c19e99ac" title="PointCloudGridEncoder\l::writeToAppendix" alt="" coords="227,239,385,280"/>
+<area shape="rect" id="node7" href="$classPointCloudGridEncoder.html#aa4014a9cf4b977cdf77a7736fe465fa4" title="PointCloudGridEncoder\l::decodeGlobalHeader" alt="" coords="448,239,607,280"/>
+</map>

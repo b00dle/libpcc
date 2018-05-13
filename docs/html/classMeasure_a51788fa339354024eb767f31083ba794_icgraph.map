@@ -1,0 +1,12 @@
+<map id="Measure::startWatch" name="Measure::startWatch">
+<area shape="rect" id="node2" href="$classPointCloudGridEncoder.html#a3b899ed7a18cbf98e34086f870765099" title="PointCloudGridEncoder\l::buildPointCloudGrid" alt="" coords="424,29,583,71"/>
+<area shape="rect" id="node6" href="$classPointCloudGridEncoder.html#ae47e58efe5fbd069c56cb59c510e4668" title="PointCloudGridEncoder\l::decodePointCloudGrid" alt="" coords="423,236,583,277"/>
+<area shape="rect" id="node8" href="$classPointCloudGridEncoder.html#a365fa28eca2b03d6fa690c4d8f80a734" title="PointCloudGridEncoder\l::encodePointCloudGrid" alt="" coords="423,95,583,136"/>
+<area shape="rect" id="node9" href="$classPointCloudGridEncoder.html#a68476ca082aa6f35407e06c45c532956" title="PointCloudGridEncoder\l::entropyCompression" alt="" coords="424,160,583,201"/>
+<area shape="rect" id="node10" href="$classPointCloudGridEncoder.html#a08f57a889a58c2d88050ed51323c0434" title="PointCloudGridEncoder\l::entropyDecompression" alt="" coords="197,269,361,311"/>
+<area shape="rect" id="node11" href="$classPointCloudGridEncoder.html#ac7c741a9394688d6572c813a977aa85c" title="PointCloudGridEncoder\l::extractPointCloudFromGrid" alt="" coords="409,376,597,417"/>
+<area shape="rect" id="node3" href="$structPointCloudGridEncoder_1_1CellHeader.html#ad442bbf799915770fde50ce2b8c71e0d" title="PointCloudGridEncoder\l::CellHeader::toString" alt="" coords="852,177,1011,219"/>
+<area shape="rect" id="node4" href="$classPointCloudGridEncoder.html#a0e172243c5b432b633f079a7cca19a92" title="PointCloudGridEncoder\l::encode" alt="" coords="645,43,804,84"/>
+<area shape="rect" id="node5" href="$test__cmdp_8cpp.html#a0ddf1224851353fc92bfbff6f499fa97" title="main" alt="" coords="906,75,957,102"/>
+<area shape="rect" id="node7" href="$classPointCloudGridEncoder.html#afa29328ee50271b7d37047a5c0b804ad" title="PointCloudGridEncoder\l::decode" alt="" coords="645,261,804,303"/>
+</map>

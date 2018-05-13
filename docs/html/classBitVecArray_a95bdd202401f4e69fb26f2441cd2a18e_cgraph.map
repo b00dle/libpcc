@@ -1,0 +1,12 @@
+<map id="BitVecArray::unpack" name="BitVecArray::unpack">
+<area shape="rect" id="node2" href="$classBitVecArray.html#ad47bfb66d63d49e1cffb661521459bca" title="BitVecArray::getByteSize" alt="" coords="196,5,367,32"/>
+<area shape="rect" id="node4" href="$classBitVec.html#ad6b7f1153047f52d41a9b541e8233ed9" title="BitVec::getXInt" alt="" coords="226,56,337,83"/>
+<area shape="rect" id="node6" href="$classBitVec.html#a5f267fc7f9f82a53b7025819a15f9485" title="BitVec::getYInt" alt="" coords="226,107,337,133"/>
+<area shape="rect" id="node7" href="$classBitVec.html#ad7648949c357dcb25e9ceb44d301e487" title="BitVec::getZInt" alt="" coords="226,157,337,184"/>
+<area shape="rect" id="node8" href="$classBitVec.html#acc23bd8e62827b3db756ea1dd1119808" title="BitVec::setX" alt="" coords="233,208,329,235"/>
+<area shape="rect" id="node10" href="$classBitVec.html#ab8c9c262500cd4e579a3e7f428e88aa3" title="BitVec::setY" alt="" coords="233,259,329,285"/>
+<area shape="rect" id="node11" href="$classBitVec.html#aeea766560c3b1c8dfbf2fa77acf113bd" title="BitVec::setZ" alt="" coords="234,309,329,336"/>
+<area shape="rect" id="node3" href="$classBitVecArray.html#afa897f67c36b9102ee65b5ba9fd4567e" title="BitVecArray::getBitSize" alt="" coords="415,5,575,32"/>
+<area shape="rect" id="node5" href="$structAbstractBitValue.html#af504982e9e8f84d8b0a050e621cf73d9" title="AbstractBitValue::get" alt="" coords="421,107,568,133"/>
+<area shape="rect" id="node9" href="$structAbstractBitValue.html#a9c633ada49e5a3e5b10a600f7621fa8b" title="AbstractBitValue::set" alt="" coords="421,259,568,285"/>
+</map>
