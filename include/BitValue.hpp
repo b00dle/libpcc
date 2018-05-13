@@ -2,7 +2,7 @@
 #define LIBPCC_BITVALUE_HPP
 
 #include <cstdlib>
-#import <bitset>
+#include <bitset>
 
 /**
  * Used to denote component precision (amount of bits) in a BitValue.
