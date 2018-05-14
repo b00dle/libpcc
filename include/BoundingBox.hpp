@@ -1,8 +1,8 @@
 #ifndef LIBPCC_BOUNDING_BOX_HPP
 #define LIBPCC_BOUNDING_BOX_HPP
 
-#include "../include/Vec.hpp"
-#include "../include/UncompressedVoxel.hpp"
+#include "Vec.hpp"
+#include "UncompressedVoxel.hpp"
 
 /**
  * Data transfer object encoding a 3D bounding box.

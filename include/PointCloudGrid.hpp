@@ -98,7 +98,7 @@ struct PointCloudGrid {
         return cells[cell_idx];
     }
 
-    Vec<float> const getQuantizationStepSize(int cell_idx) const
+    Vec<float> const getQuantizationStepSize(size_t cell_idx) const
     {
         if(cell_idx >= cells.size() || cell_idx < 0) {
             std::cout << "NOTIFICATION: invalid cell_idx for call to getQuantizationStepSize" << std::endl;

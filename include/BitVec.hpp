@@ -5,8 +5,8 @@
 #include <vector>
 #include <bitset>
 
-#include "../include/BitValue.hpp"
-#include "../include/Vec.hpp"
+#include "BitValue.hpp"
+#include "Vec.hpp"
 
 /**
  * Three component vector class

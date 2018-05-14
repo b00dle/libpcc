@@ -33,6 +33,7 @@ add_executable(libpcc
         include/PointCloudGridEncoder.hpp
         src/PointCloudGridEncoder.cpp
         include/BitValue.hpp
+        src/BitValue.cpp
         include/BitVecArray.hpp
         src/BitVecArray.cpp
         src/BitVec.cpp

@@ -28,8 +28,8 @@ public:
     struct EncodingSettings {
         EncodingSettings()
             : grid_precision()
-            , num_threads(24)
             , verbose(false)
+            , num_threads(24)
             , irrelevance_coding(true)
             , entropy_coding(true)
             , appendix_size(0)
@@ -37,7 +37,7 @@ public:
 
         EncodingSettings(const EncodingSettings&) = default;
 
-        Vec<float> const getQuantizationStepSize(int cell_idx) const
+        Vec<float> const getQuantizationStepSize(size_t cell_idx) const
         {
             if(cell_idx >= grid_precision.point_precision.size() || cell_idx < 0) {
                 std::cout << "NOTIFICATION: invalid cell_idx for call to getQuantizationStepSize" << std::endl;

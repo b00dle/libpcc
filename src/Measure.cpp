@@ -1,4 +1,4 @@
-#include "../include/Measure.hpp"
+#include "Measure.hpp"
 
 Measure::Measure()
   : start_time_()
@@ -52,7 +52,7 @@ const Measure::ComparisonResult Measure::compare(std::vector<UncompressedVoxel> 
     std::vector<float> color_errors(p1.size());
 
 #pragma omp parallel for
-    for(int p1_idx = 0; p1_idx < p1.size(); ++p1_idx) {
+    for(size_t p1_idx = 0; p1_idx < p1.size(); ++p1_idx) {
         if(!bb.contains(p1[p1_idx].pos))
             continue;
         float closest_distance = 100000;

@@ -1,12 +1,11 @@
-#include "../include/PointCloudGridEncoder.hpp"
+#include "PointCloudGridEncoder.hpp"
 
 #include <set>
 #include <omp.h>
 #include <regex>
 
 #include "zlib.h"
-
-#include "../include/Measure.hpp"
+#include "Measure.hpp"
 
 void removeTailingWhitespaces(std::string& str)
 {
@@ -258,7 +257,7 @@ void PointCloudGridEncoder::buildPointCloudGrid(const std::vector<UncompressedVo
         PropertyMap::iterator it;
         int discarded_by_bb = 0;
         int discarded_by_cell = 0;
-        for(unsigned i=0; i < num_points; ++i) {
+        for(unsigned i=0; (int) i < num_points; ++i) {
             if (!pc_grid_->bounding_box.contains(point_cloud[i].pos)) {
                 discarded_by_bb++;
                 continue;
@@ -316,7 +315,7 @@ void PointCloudGridEncoder::buildPointCloudGrid(const std::vector<UncompressedVo
         // calculate cell indexes for points
         // and number of elements per thread grid cell
 #pragma omp parallel for schedule(static)
-        for(unsigned i=0; i < num_points; ++i) {
+        for(unsigned i=0; (int) i < num_points; ++i) {
             int t_num = omp_get_thread_num();
             if (!pc_grid_->bounding_box.contains(point_cloud[i].pos)) {
                 discarded_by_bb[t_num] += 1;
@@ -352,7 +351,7 @@ void PointCloudGridEncoder::buildPointCloudGrid(const std::vector<UncompressedVo
 
         // insert compressed points into main grid
 #pragma omp parallel for schedule(static)
-        for(unsigned i=0; i < num_points; ++i) {
+        for(int i=0; i < num_points; ++i) {
             int t_num = omp_get_thread_num();
             if (!pc_grid_->bounding_box.contains(point_cloud[i].pos))
                 continue;
@@ -686,7 +685,6 @@ bool PointCloudGridEncoder::decodePointCloudGrid(zmq::message_t& msg)
 size_t PointCloudGridEncoder::encodeGlobalHeader(zmq::message_t &msg, size_t offset) {
     auto entropy_coding = new bool[1];
     entropy_coding[0] = global_header_->entropy_coding;
-    size_t bytes_entropy(sizeof(unsigned char));
     memcpy((unsigned char*) msg.data() + offset,(unsigned char*) entropy_coding, sizeof(bool));
     offset += sizeof(bool);
 

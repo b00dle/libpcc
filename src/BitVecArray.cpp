@@ -1,4 +1,4 @@
-#include "../include/BitVecArray.hpp"
+#include "BitVecArray.hpp"
 
 BitVecArray::BitVecArray(BitCount t_NX, BitCount t_NY, BitCount t_NZ)
         : data_()
@@ -81,7 +81,7 @@ void BitVecArray::unpack(unsigned char* packed_data, size_t num_elmnts)
             if(current_bit < nx_) {
                 bit_vec.setX(current_bit, byte[byte_idx]);
             }
-            else if(current_bit < nx_+ny_) {
+            else if(current_bit < (size_t) nx_+ny_) {
                 bit_vec.setY(current_bit-nx_, byte[byte_idx]);
             }
             else {

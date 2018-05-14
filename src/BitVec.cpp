@@ -1,4 +1,4 @@
-#include "../include/BitVec.hpp"
+#include "BitVec.hpp"
 
 BitVec::BitVec(uint64_t t_x, uint64_t t_y, uint64_t t_z, BitCount NX, BitCount NY, BitCount NZ)
     : x_(nullptr)
@@ -123,14 +123,15 @@ const std::vector<bool> BitVec::getPackedBitset() const
 
 void BitVec::setFromPackedBitset(const std::vector<bool> &packed)
 {
-    if(packed.size() != x_->getN()+y_->getN()+z_->getN())
+    size_t x_n = x_->getN(), y_n = y_->getN(), z_n = z_->getN(); 
+    if(packed.size() != x_n + y_n + z_n)
         return;
-    for(size_t i = 0; i < x_->getN(); ++i)
+    for(size_t i = 0; i < x_n; ++i)
         x_->setBit(i, packed[i]);
-    for(size_t i = 0; i < y_->getN(); ++i)
-        y_->setBit(i, packed[x_->getN()+i]);
-    for(size_t i = 0; i < z_->getN(); ++i)
-        z_->setBit(i, packed[x_->getN()+y_->getN()+i]);
+    for(size_t i = 0; i < y_n; ++i)
+        y_->setBit(i, packed[x_n+i]);
+    for(size_t i = 0; i < z_n; ++i)
+        z_->setBit(i, packed[x_n+y_n+i]);
 }
 
 const AbstractBitValue *BitVec::getX() const
