@@ -1,4 +1,4 @@
-#include "../include/Encoder.hpp"
+#include "Encoder.hpp"
 #include <cassert>
 #include <iostream>
 

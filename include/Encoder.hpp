@@ -4,7 +4,7 @@
 #include <cmath>
 #include "BoundingBox.hpp"
 #include "Vec.hpp"
-#include "../include/BitVec.hpp"
+#include "BitVec.hpp"
 
 /**
  * Defines general static mapping & conversion functions.

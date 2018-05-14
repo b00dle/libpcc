@@ -1,4 +1,4 @@
-#include "../include/CMDParser.hpp"
+#include "CMDParser.hpp"
 #include <iostream>
 #include <stdlib.h>
 

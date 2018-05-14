@@ -1,7 +1,7 @@
 
 
 CXX = c++
-CXXFLAGS = -g -std=c++0x -DLINUX -Wall -O3 -I../include -fPIC -lz
+CXXFLAGS = -g -std=c++0x -DLINUX -Wall -O3 -I../include -fPIC -lz -fopenmp
 
 LDDFLAGS = -shared
 
